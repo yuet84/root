@@ -42,3 +42,5 @@ python info
 																df.Stock['HMA'] = df.Stock['HMA'].ewm(alpha=round(T**0.5), adjust=False)
 				}
 		}
+		|
+		|===
