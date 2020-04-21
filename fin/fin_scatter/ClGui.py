@@ -164,8 +164,8 @@ class ClGui(wx.App):
         if(self.wxCheckMA240.GetValue() == True):
             PlotMA.plot(xd, self.dfStock['MA240'], color='red', label='MA-240', linewidth=0.5)
 
-        PlotMA.plot(xd, self.dfStock['Thre0.618'], color='black', label='Thre-0.618', linewidth=0.5)
-        PlotMA.plot(xd, self.dfStock['Thre0.309'], color='black', label='Thre-0.309', linewidth=0.5)
+        PlotMA.plot(xd, self.dfStock['EMA30'], color='black', label='EMA-30', linewidth=0.5)
+        PlotMA.plot(xd, self.dfStock['HMA30'], color='green', label='HMA-30', linewidth=0.5)
 
         PlotMA.legend(loc='best', shadow=True, fontsize='8')
         self.wxCanvas.draw()

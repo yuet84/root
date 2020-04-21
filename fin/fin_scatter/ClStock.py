@@ -18,9 +18,11 @@ class ClStock():
     def __init__(self,sStockCode):
         self.sStockCode = sStockCode
 
-        self.URL = os.path.join(r"F:\root\fin\data", self.sStockCode + '.csv')
+        self.URL = os.path.join(os.path.abspath('../data'), self.sStockCode + '.csv')
         self.dfStock = self.ReaddfStock()                   # Read dfStock from disk
         self.CreateMA()                                     # Create MA
+        self.CreateEMA()                                    # Create EMA
+        self.CreateHMA()
         self.CreateThre()
 
     ############################################################
@@ -52,6 +54,16 @@ class ClStock():
         self.dfStock['MA60'] = self.dfStock.Close.rolling(window=60).mean()
         self.dfStock['MA120'] = self.dfStock.Close.rolling(window=120).mean()
         self.dfStock['MA240'] = self.dfStock.Close.rolling(window=240).mean()
+
+    def CreateEMA(self):
+        self.dfStock['EMA30'] = self.dfStock.Close.ewm(alpha=(1/30), adjust=False, ignore_na=True).mean()
+
+    def CreateHMA(self):
+        T = 30
+        serHshort = self.dfStock['Close'].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        serHlong = self.dfStock['Close'].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        ser = serHshort - serHlong
+        self.dfStock['HMA30'] = ser.ewm(alpha=1 / T ** 0.5, adjust=False, ignore_na=True).mean()
 
     ##########################################################################################
     ### Desc:

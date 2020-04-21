@@ -16,12 +16,6 @@ dfStock = pd.DataFrame([[1,10.1,10.1,10.1],
                         [20,12.4,12.4,12.4]],
                   index=['2020-1-1','2020-1-2','2020-1-3','2020-1-4','2020-1-5',],
                   columns=['Ma20', 'Close','Low','High'])
-'''
-d = {2010:1, 2011:2, 2012:3}
-for i in np.arange(2000,2020):
-    if(d.has_key(i)):
-        print(i, d[i])
-'''
-d = {'name':{},'age':{},'sex':{}}
-print('name' in d.keys())
+
+print(os.path.abspath('../data'))
 
