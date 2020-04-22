@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
-import mpl_finance as mpf #替换 import matplotlib.finance as mpf
+import mplfinance as mpf #替换 import mpl_finance as mpf
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import matplotlib.gridspec as gridspec#分割子图
 import datetime
@@ -144,7 +144,7 @@ class ClGui(wx.App):
         xd = np.arange(0, len(self.dfStock.index))
 
         if(self.wxCheckMA1.GetValue() == True):
-            PlotMA.plot(xd, self.dfStock['MA1'], color='red', label='MA-1', linewidth=0.5)
+            PlotMA.plot(xd, self.dfStock['MA1'], color='grey', label='MA-1', linewidth=0.5)
         if(self.wxCheckMA5.GetValue() == True):
             PlotMA.plot(xd, self.dfStock['MA5'], color='red', label='MA-5', linewidth=0.5)
         if(self.wxCheckMA10.GetValue() == True):
@@ -165,7 +165,7 @@ class ClGui(wx.App):
             PlotMA.plot(xd, self.dfStock['MA240'], color='red', label='MA-240', linewidth=0.5)
 
         PlotMA.plot(xd, self.dfStock['EMA30'], color='black', label='EMA-30', linewidth=0.5)
-        PlotMA.plot(xd, self.dfStock['HMA30'], color='green', label='HMA-30', linewidth=0.5)
+        PlotMA.plot(xd, self.dfStock['HMA30'], color='red', label='HMA-30', linewidth=0.5)
 
         PlotMA.legend(loc='best', shadow=True, fontsize='8')
         self.wxCanvas.draw()

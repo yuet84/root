@@ -34,8 +34,7 @@ class ClStock():
         else:
             dfStock = pd.read_csv(self.URL,                 # Read csv from local disk
                                   parse_dates=True,
-                                  index_col=0,
-                                  encoding='gb2312')
+                                  index_col=0)
             return dfStock
 
     ##########################################################################################
