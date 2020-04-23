@@ -1,5 +1,23 @@
 python info
 		|
+		|===日期、时间										{
+				|
+				|---当前日期：								{
+															import datetime
+															Date = datetime.date.today()
+				}
+				|
+				|---字符串转化成时间：						{
+															import datetime
+															Date = datetime.datetime.strptime("2015-01-01", '%Y-%m-%d')
+				}
+				|
+				|---时间转换成字符串：						{
+															import datetime
+															sDate = Date.strftime('%Y-%m-%d')
+				}
+		}
+		|
 		|===移动平均线：									{
 				|
 				|---EMA(Exponential Moving Average):		{
