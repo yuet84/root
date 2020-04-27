@@ -217,6 +217,11 @@ class ClGui(wx.App):
         ser = ser[ser.index <= self.DateEnd]
         xd = np.arange(0, len(ser.index))
         wxPlot.plot(xd, ser, color='black', label=self.sSMAShort, linewidth=0.5)
+
+        wxPlot.set_xlim(0,len(ser.index))
+        wxPlot.set_xticks(range(0, len(ser.index), 100))
+        wxPlot.set_xticklabels([ser.index[i].strftime('%Y-%m-%d') for i in wxPlot.get_xticks()], rotation=30)
+        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)            # Set grid
         '''
         # Curve: SMA long
         ser = self.dfStock['Close'].rolling(window=self.DICT[self.sSMALong]).mean()
