@@ -5,10 +5,10 @@ from ClGui import ClGui
 import warnings
 #warnings.filterwarnings('ignore')
 
+DICT_STOCK={"510310":"HS300"}
+
 if __name__ == '__main__':
-    #sStockCode = "1A0001"
-    sStockCode = "510310"           # HS300
+    sStockCode = "510310"
     uStock = ClStock(sStockCode)
-    #uStock.FixFundUpdate("2015-01-10")
     uGui = ClGui(sStockCode, uStock.dfStock)
     uGui.MainLoop()

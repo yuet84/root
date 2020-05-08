@@ -35,7 +35,7 @@ class ClGui(wx.App):
         self.dfStock=dfStock
         self.DateStart = datetime.datetime.strptime("2015-01-01", '%Y-%m-%d')
         self.DateEnd = datetime.datetime.now()
-        self.DICT={'MA-1':1,'MA-5':5,'MA-10':10, 'MA-20':20, 'MA-30':30, 'MA-40':40, 'MA-50':50, 'MA-60':60, 'MA-80':80, 'MA-100':100, 'MA-120':120, 'MA-150':150, 'MA-200':200, 'MA-240':240}
+        self.DICT={'HMA-1':1,'MA-5':5,'MA-10':10, 'MA-20':20, 'MA-30':30, 'MA-40':40, 'MA-50':50, 'MA-60':60, 'MA-80':80, 'MA-100':100, 'MA-120':120, 'MA-150':150, 'MA-200':200, 'MA-240':240}
         wx.App.__init__(self)
 
     ############################################################
@@ -116,7 +116,7 @@ class ClGui(wx.App):
         wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
         wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
 
-        t = 'MA-1'
+        t = 'HMA - 1'
         self.sSMAShort = t
         wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
         wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetSMAShort)
@@ -132,7 +132,7 @@ class ClGui(wx.App):
         wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
         wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
 
-        t = 'MA-20'
+        t = 'HMA - 20'
         self.sSMALong = t
         wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
         wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetSMALong)
@@ -206,44 +206,70 @@ class ClGui(wx.App):
     def WxPlotHMA(self, event):
         self.wxSizer.Hide(self.wxCanvas)
         self.wxCanvasFig.clear()
+        wxPlot = self.wxCanvasFig.add_subplot(111)          # Create subplot
 
-        ##############################
-        # Plot MA
-        wxPlot = self.wxCanvasFig.add_subplot(111)          # Create subplot - 0: MA
+        ########################
+        # Plot Close
 
-        # Curve: SMA short
-        ser = self.dfStock['Close'].rolling(window=self.DICT[self.sSMAShort]).mean()
-        ser = ser[ser.index >= self.DateStart]
-        ser = ser[ser.index <= self.DateEnd]
-        xd = np.arange(0, len(ser.index))
-        wxPlot.plot(xd, ser, color='black', label=self.sSMAShort, linewidth=0.5)
+        # Create SMA
+        T = 1
+        serSMA = self.dfStock['Close'].rolling(window=T).mean()
 
-        wxPlot.set_xlim(0,len(ser.index))
-        wxPlot.set_xticks(range(0, len(ser.index), 100))
-        wxPlot.set_xticklabels([ser.index[i].strftime('%Y-%m-%d') for i in wxPlot.get_xticks()], rotation=30)
-        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)            # Set grid
-        '''
-        # Curve: SMA long
-        ser = self.dfStock['Close'].rolling(window=self.DICT[self.sSMALong]).mean()
-        wxPlot.plot(xd, ser, color='yellow', label=self.sSMALong, linewidth=0.5)
+        # Cut off the target date section
+        serSMA = serSMA[serSMA.index >= self.DateStart]
+        serSMA = serSMA[serSMA.index <= self.DateEnd]
 
-        # Curve: HMA short
+        # Create x-axis
+        xd = np.arange(0, len(serSMA.index))
+        wxPlot.set_xlim(0,len(serSMA.index))
+        wxPlot.set_xticks(range(0, len(serSMA.index), round(len(serSMA.index) / 10)))
+        wxPlot.set_xticklabels([serSMA.index[i].strftime('%Y-%m-%d') for i in wxPlot.get_xticks()], rotation=30)
+        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+
+        # Plot
+        wxPlot.plot(xd, serSMA, color='grey', label="SMA - 1", linewidth=0.5)
+
+        ########################
+        # Plot HMA short
+
+        # Create HMA
         T = self.DICT[self.sHMAShort]
-        serHshort = self.dfStock['Close'].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
-        serHlong = self.dfStock['Close'].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
-        ser = serHshort - serHlong
-        serHMA = ser.ewm(alpha=1 / T ** 0.5, adjust=False, ignore_na=True).mean()
-        wxPlot.plot(xd, serHMA, color='red', label=self.sSMALong, linewidth=0.5)
+        serHShort = self.dfStock['Close'].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        serHLong = self.dfStock['Close'].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        serHDelta = serHShort - serHLong
+        serHMA = serHDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
 
-        # Curve: HMA long
+        # Cut off the target date section
+        serHMA = serHMA[serHMA.index >= self.DateStart]
+        serHMA = serHMA[serHMA.index <= self.DateEnd]
+
+        # Create x-axis
+        xd = np.arange(len(serSMA.index) - len(serHMA.index), len(serSMA.index))
+
+        # Plot
+        wxPlot.plot(xd, serHMA, color='red', label=self.sHMAShort, linewidth=0.5)
+
+
+        ########################
+        # Plot HMA long
+
+        # Create HMA
         T = self.DICT[self.sHMALong]
-        print(T)
-        serHshort = self.dfStock['Close'].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
-        serHlong = self.dfStock['Close'].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
-        ser = serHshort - serHlong
-        serHMA = ser.ewm(alpha=1 / T ** 0.5, adjust=False, ignore_na=True).mean()
-        wxPlot.plot(xd, serHMA, color='red', label=self.sSMALong, linewidth=0.5)
-        '''
+        serHShort = self.dfStock['Close'].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        serHLong = self.dfStock['Close'].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        serHDelta = serHShort - serHLong
+        serHMA = serHDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
+
+        # Cut off the target date section
+        serHMA = serHMA[serHMA.index >= self.DateStart]
+        serHMA = serHMA[serHMA.index <= self.DateEnd]
+
+        # Create x-axis
+        xd = np.arange(len(serSMA.index) - len(serHMA.index), len(serSMA.index))
+
+        # Plot
+        wxPlot.plot(xd, serHMA, color='green', label=self.sSMALong, linewidth=0.5)
+
         wxPlot.legend(loc='best', shadow=True, fontsize='8')
         self.wxCanvas.draw()
         self.wxSizer.Show(self.wxCanvas)

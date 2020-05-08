@@ -18,7 +18,14 @@ dfStock = pd.DataFrame([[1,10.1,10.1,10.1],
                         [20,12.4,12.4,12.4]],
                   index=['2020-1-1','2020-1-2','2020-1-3','2020-1-4','2020-1-5',],
                   columns=['Ma20', 'Close','Low','High'])
-ser = dfStock['Close']
-ser = ser[ser.index >= "2020-1-2"]
-ser = ser[ser.index <= "2020-1-4"]
-print(ser)
+
+ser = pd.Series([10, 20, 30, 40], index=['2010-01-01', '2010-01-02', '2010-01-03', '2010-01-04'])
+ser2 = pd.Series([100, 200], index=['2010-01-05', '2010-01-06'])
+
+xd = np.arange(0, len(ser.index))
+plt.plot(xd,ser)
+#xd = np.arange(len(ser.index)-len(ser2.index), len(ser2.index))
+xd=np.arange(len(ser.index)-len(ser2.index), len(ser.index))
+plt.plot(xd,ser2)
+plt.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)  # Set grid
+plt.show()
