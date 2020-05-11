@@ -18,10 +18,6 @@ import csv,os
 import codecs
 from numpy import arange, sin, pi
 
-plt.rcParams['font.sans-serif']=['SimHei']      # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
-
-
 ##########################################################################################
 ### Class function:
 ###     OnInit():           Init and Display GUI顶层frame: /wxFrame, /wxFrame/wxPanelCmd, /wxFrame/self.wxPanelPlot;
@@ -29,34 +25,41 @@ plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
 ###     WxPlotHMA():        Button bind function: Plot MA;
 ###     LayoutPanelPlot():  Layout panel plot: ./Canvas/CanvasFig;
 ##########################################################################################
+plt.rcParams['font.sans-serif']=['SimHei']      # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
 class ClGui(wx.App):
-    def __init__(self,sStockCode=None,dfStock=None):
-        self.sStockCode=sStockCode                      # Must init params here
-        self.dfStock=dfStock
-        self.DateStart = datetime.datetime.strptime("2015-01-01", '%Y-%m-%d')
-        self.DateEnd = datetime.datetime.now()
-        self.DICT={'HMA-1':1,'MA-5':5,'MA-10':10, 'MA-20':20, 'MA-30':30, 'MA-40':40, 'MA-50':50, 'MA-60':60, 'MA-80':80, 'MA-100':100, 'MA-120':120, 'MA-150':150, 'MA-200':200, 'MA-240':240}
+    def __init__(self, sStockCode=None, sStockName=None, dfStock=None):
+        ### Passing params ###
+        self.sStockCode = sStockCode
+        self.sStockName = sStockName
+        self.dfStock = dfStock
+
+        ### Global params ###
+        self.DateStart = datetime.datetime.strptime("2015-01-01", '%Y-%m-%d')           # Plot start date
+        self.DateEnd = datetime.datetime.now()                                          # Plot end date
+        self.DICT = {'HMA-1': 1, 'MA-5': 5, 'MA-10': 10, 'MA-20': 20, 'MA-30': 30, 'MA-40': 40, 'MA-50': 50,
+                     'MA-60': 60,
+                     'MA-80': 80, 'MA-100': 100, 'MA-120': 120, 'MA-150': 150, 'MA-200': 200, 'MA-240': 240}
+
+        ### Call function ###
         wx.App.__init__(self)
 
     ############################################################
     ### Init and Display GUI顶层frame: /wxFrame, /wxFrame/wxPanelCmd, /wxFrame/self.wxPanelPlot
     ############################################################
     def OnInit(self):
-        ##############################
-        # Create /wxFrame
+        ### Create /wxFrame ###
         wxFrame = wx.Frame(None,
-                           title=self.sStockCode,
+                           title=self.sStockCode + " - " + self.sStockName,
                            style=wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE)
         wxSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        ##############################
-        # Create /wxFrame/wxPanelCmd
+        ### Create /wxFrame/wxPanelCmd ###
         wxPanelCmd = wx.Panel(parent=wxFrame,id=-1)
         wxSizer.Add(wxPanelCmd, proportion=1, border=2, flag=wx.EXPAND|wx.ALL)
         self.LayoutPanelCmd(wxPanelCmd)
 
-        ##############################
-        # Create /wxFrame/wxPanelPlot
+        ### Create /wxFrame/wxPanelPlot ###
         self.wxPanelPlot = wx.Panel(parent=wxFrame,id=-1)
         wxSizer.Add(self.wxPanelPlot, proportion=9, border=2, flag=wx.EXPAND|wx.ALL)
         self.LayoutPanelPlot(self.wxPanelPlot)
@@ -72,14 +75,7 @@ class ClGui(wx.App):
     def LayoutPanelCmd(self, parent):
         wxSizer = wx.BoxSizer(orient=wx.VERTICAL)
 
-        ##############################
-        # Create ./Text: Stock code
-        wxText = wx.StaticText(parent, -1, label=self.sStockCode + " - ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=16,family=wx.ROMAN,style=wx.NORMAL,weight=wx.BOLD))
-        wxSizer.Add(wxText, proportion=0, border=20, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ##############################
-        # Create ./Date: 起始时间
+        ### Create ./Date: 起始时间 ###
         wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
 
         wxText = wx.StaticText(parent, -1, label="From:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
@@ -91,10 +87,9 @@ class ClGui(wx.App):
         wxDate.Bind(wx.adv.EVT_DATE_CHANGED, self.WxGetDateStart)
         wxSizerTmp.Add(wxDate, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
 
-        wxSizer.Add(wxSizerTmp, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
+        wxSizer.Add(wxSizerTmp, proportion=0, border=50, flag=wx.ALIGN_CENTRE|wx.TOP)
 
-        ##############################
-        # Create ./Date: 结束时间
+        ### Create ./Date: 结束时间 ###
         wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
 
         wxText = wx.StaticText(parent, -1, label="To:      ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
@@ -108,67 +103,40 @@ class ClGui(wx.App):
 
         wxSizer.Add(wxSizerTmp, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
 
-        ##############################
-        # Create SMA short
+        ### Create ./SMA ###
         wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
 
         wxText = wx.StaticText(parent, -1, label="SMA short:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
         wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
         wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
 
-        t = 'HMA - 1'
-        self.sSMAShort = t
-        wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
-        wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetSMAShort)
-        wxSizerTmp.Add(wxCombo, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
+        self.wxSMAPeriod = wx.TextCtrl(parent, -1, value="1", size=(60,20), style=wx.TE_CENTER)
+        wxSizerTmp.Add(self.wxSMAPeriod, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
 
         wxSizer.Add(wxSizerTmp, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
 
-        ##############################
-        # Create SMA long
+        ### Create ./HMA short ###
         wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
 
-        wxText = wx.StaticText(parent, -1, label="SMA long:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
+        wxText = wx.StaticText(parent, -1, label="HMA short:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
         wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
         wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
 
-        t = 'HMA - 20'
-        self.sSMALong = t
-        wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
-        wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetSMALong)
-        wxSizerTmp.Add(wxCombo, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ##############################
-        # Create HMA short
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        wxText = wx.StaticText(parent, -1, label="hMA short:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        t = 'MA-20'
-        self.sHMAShort = t
-        wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
-        wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetHMAShort)
-        wxSizerTmp.Add(wxCombo, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
+        self.wxSHMAPeriod = wx.TextCtrl(parent, -1, value="24", size=(60,20), style=wx.TE_CENTER)
+        wxSizerTmp.Add(self.wxSHMAPeriod, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
 
         wxSizer.Add(wxSizerTmp, proportion=0, border=20, flag=wx.ALIGN_CENTRE|wx.TOP)
 
-        ##############################
-        # Create HMA long
+        ### Create ./HMA long ###
         wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
 
-        wxText = wx.StaticText(parent, -1, label="SMA long:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
+        wxText = wx.StaticText(parent, -1, label="HMA long:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
         wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
         wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
 
-        t = 'MA-60'
-        self.sHMALong = t
-        wxCombo = wx.ComboBox(parent, -1, value=t, choices=list(self.DICT), style=wx.CB_DROPDOWN)
-        wxCombo.Bind(wx.EVT_COMBOBOX,self.WxGetHMALong)
-        wxSizerTmp.Add(wxCombo, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
+        self.wxLHMAPeriod = wx.TextCtrl(parent, -1, value="52", size=(60,20), style=wx.TE_CENTER)
+        wxSizerTmp.Add(self.wxLHMAPeriod, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
+
 
         wxSizer.Add(wxSizerTmp, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
 

@@ -9,6 +9,6 @@ DICT_STOCK={"510310":"HS300"}
 
 if __name__ == '__main__':
     sStockCode = "510310"
-    uStock = ClStock(sStockCode)
-    uGui = ClGui(sStockCode, uStock.dfStock)
+    uStock = ClStock(sStockCode)                        # Create class instance
+    uGui = ClGui(sStockCode, DICT_STOCK[sStockCode], uStock.dfStock)            # Plot HMA
     uGui.MainLoop()
