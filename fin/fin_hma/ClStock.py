@@ -9,10 +9,14 @@ import codecs
 import talib
 from dateutil.relativedelta import relativedelta
 
-##########################################################################################
-### Class function:
-###     ReaddfStock():          Read dfStock from local disk: File name = F:\root\fin\data\sStockCode.csv
-##########################################################################################
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Class Stock:
+    ReaddfStock(self, sUrl):        Read dfStock from local disk (sUrl: Stock file) (Return dfStock);
+------------------------------------------------------------------------------------------
+    Standard module:
+    CalcSma(self, ser, T, DateFrom, DateEnd):       Calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
+    CalcHma(self, ser, T, DateFrom, DateEnd):       Calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 class ClStock():
     def __init__(self, sStockCode):
         ### Passing params ###
@@ -22,16 +26,16 @@ class ClStock():
         self.URL = os.path.join(os.path.abspath('../data'), self.sStockCode + '.csv')       #   Download stock data file
 
         ### Call function ###
-        self.dfStock = self.ReaddfStock()                   # Read dfStock from disk
+        self.dfStock = self.ReaddfStock(self.URL)           # Read dfStock from disk
 
     ############################################################
-    ### Read dfStock from local disk: File name = F:\root\fin\data\sStockCode.csv
+    ### Read dfStock from local disk (sUrl: Stock file) (Return dfStock)
     ############################################################
-    def ReaddfStock(self):
+    def ReaddfStock(self, sUrl):
         if not os.path.exists(self.URL):
             print(">>> Stock data - ", self.sStockCode, ": Not exist. Try to get stock data online!\n")
         else:
-            dfStock = pd.read_csv(self.URL,                 # Read csv from local disk
+            dfStock = pd.read_csv(sUrl,                     # Read csv from local disk
                                   parse_dates=True,
                                   index_col=0)
             return dfStock

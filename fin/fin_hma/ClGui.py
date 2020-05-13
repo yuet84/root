@@ -17,7 +17,7 @@ import talib
 import csv,os
 import codecs
 from numpy import arange, sin, pi
-
+from ClStock import ClStock
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Class Gui:
@@ -34,15 +34,15 @@ Class Gui:
 plt.rcParams['font.sans-serif']=['SimHei']      # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
 class ClGui(wx.App):
-    def __init__(self, sStockCode=None, sStockName=None, dfStock=None):
+    def __init__(self, sStockCode=None, sStockName=None):
         ### Passing params ###
         self.sStockCode = sStockCode
         self.sStockName = sStockName
-        self.dfStock = dfStock
-        self.dfStock = dfStock
 
         ### Global params ###
         self.sDateStart = "2015-01-01"          # Plot start date
+        self.uStock = ClStock(sStockCode)
+        self.dfStock = self.uStock.dfStock
 
         ### Call function ###
         wx.App.__init__(self)
@@ -85,7 +85,10 @@ class ClGui(wx.App):
         sizer, self.wxEntrySma = self.LayoutEntry(parent, "SMA:", "1")
         wxSizer.Add(sizer, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
         ### Create ./Entry: HMA short ###
-        sizer, self.wxEntryHmaShort = self.LayoutEntry(parent, "HMA Short:", "24")
+        sizer, self.wxEntryHmaShort = self.LayoutEntry(parent, "HMA Short:", "12")
+        wxSizer.Add(sizer, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Entry: HMA medium ###
+        sizer, self.wxEntryHmaMedium = self.LayoutEntry(parent, "HMA Medium:", "26")
         wxSizer.Add(sizer, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
         ### Create ./Entry: HMA long ###
         sizer, self.wxEntryHmaLong = self.LayoutEntry(parent, "HMA Long:", "52")
@@ -129,7 +132,7 @@ class ClGui(wx.App):
         wxPlot = self.wxCanvasFig.add_subplot(111)          # Create subplot
 
         ### Plot SMA ###
-        serSma = self.CalcSma(self.dfStock["Close"], int(self.wxEntrySma.GetValue()), DateStart, DateEnd)
+        serSma = self.uStock.CalcSma(self.dfStock["Close"], int(self.wxEntrySma.GetValue()), DateStart, DateEnd)
         xd = np.arange(0, len(serSma.index))
         wxPlot.plot(xd, serSma, color='grey', label="SMA - " + self.wxEntrySma.GetValue(), linewidth=0.2)
 
@@ -140,13 +143,19 @@ class ClGui(wx.App):
         wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
 
         ### Plot HMA short ###
-        serHmaShort = self.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaShort.GetValue()), DateStart, DateEnd)
+        serHmaShort = self.uStock.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaShort.GetValue()), DateStart, DateEnd)
         if(serHmaShort.index[-1] == serSma.index[-1]):
             xd = np.arange(len(serSma.index) - len(serHmaShort.index), len(serSma.index))
             wxPlot.plot(xd, serHmaShort, color='red', label="HMA - " + self.wxEntryHmaShort.GetValue(), linewidth=1)
 
+        ### Plot HMA medium ###
+        serHmaMedium = self.uStock.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaMedium.GetValue()), DateStart, DateEnd)
+        if(serHmaMedium.index[-1] == serSma.index[-1]):
+            xd = np.arange(len(serSma.index) - len(serHmaMedium.index), len(serSma.index))
+            wxPlot.plot(xd, serHmaMedium, color='blue', label="HMA - " + self.wxEntryHmaMedium.GetValue(), linewidth=0.8)
+
         ### Plot HMA long ###
-        serHmaLong = self.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaLong.GetValue()), DateStart, DateEnd)
+        serHmaLong = self.uStock.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaLong.GetValue()), DateStart, DateEnd)
         if(serHmaLong.index[-1] == serSma.index[-1]):
             xd = np.arange(len(serSma.index) - len(serHmaLong.index), len(serSma.index))
             wxPlot.plot(xd, serHmaLong, color='green', label="HMA - " + self.wxEntryHmaLong.GetValue(), linewidth=0.5)
@@ -198,27 +207,3 @@ class ClGui(wx.App):
         wxBtn.Bind(event=wx.EVT_BUTTON, handler=FuncEntry)
         return wxBtn
 
-    ############################################################
-    ### Standard calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
-    ############################################################
-    def CalcSma(self, ser, T, DateFrom, DateEnd):
-        ### Create SMA ###
-        serSma = ser.rolling(window=T).mean()
-        ### Cut off the target date section ###
-        serSma = serSma[serSma.index >= DateFrom]
-        serSma = serSma[serSma.index <= DateEnd]
-        return serSma
-
-    ############################################################
-    ### Standard calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
-    ############################################################
-    def CalcHma(self, ser, T, DateFrom, DateEnd):
-        ### Create HMA ###
-        serHmaShort = ser.ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
-        serHmaLong = ser.ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
-        serHmaDelta = serHmaShort - serHmaLong
-        serHma = serHmaDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
-        ### Cut off the target date section ###
-        serHma = serHma[serHma.index >= DateFrom]
-        serHma = serHma[serHma.index <= DateEnd]
-        return serHma
