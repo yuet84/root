@@ -36,5 +36,31 @@ class ClStock():
                                   index_col=0)
             return dfStock
 
+    ############################################################
+    ### Standard calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
+    ############################################################
+    def CalcSma(self, ser, T, DateFrom, DateEnd):
+        ### Create SMA ###
+        serSma = ser.rolling(window=T).mean()
+        ### Cut off the target date section ###
+        serSma = serSma[serSma.index >= DateFrom]
+        serSma = serSma[serSma.index <= DateEnd]
+        return serSma
+
+    ############################################################
+    ### Standard calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
+    ############################################################
+    def CalcHma(self, ser, T, DateFrom, DateEnd):
+        ### Create HMA ###
+        serHmaShort = ser.ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        serHmaLong = ser.ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        serHmaDelta = serHmaShort - serHmaLong
+        serHma = serHmaDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
+        ### Cut off the target date section ###
+        serHma = serHma[serHma.index >= DateFrom]
+        serHma = serHma[serHma.index <= DateEnd]
+        return serHma
+
+
 
 

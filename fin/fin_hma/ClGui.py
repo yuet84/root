@@ -18,13 +18,19 @@ import csv,os
 import codecs
 from numpy import arange, sin, pi
 
-##########################################################################################
-### Class function:
-###     OnInit():           Init and Display GUI顶层frame: /wxFrame, /wxFrame/wxPanelCmd, /wxFrame/self.wxPanelPlot;
-###     LayoutPanelCmd():   Layout panel cmd: ./Text: 'Stock Code';  ./Combo: SMA short, SMA long, HMA short, HMA long;  ./Btn: '绘图';
-###     WxPlotHMA():        Button bind function: Plot MA;
-###     LayoutPanelPlot():  Layout panel plot: ./Canvas/CanvasFig;
-##########################################################################################
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Class Gui:
+    OnInit():           wxPython Init (Top fram; Panel cmd; Panel plot);
+    LayoutPanelCmd():   Layout panel cmd (Date picker: Start - End; Entry: Period of Sma | Hma short | Hma long; Button: Plot);
+    LayoutPanelPlot():  Layout panel plot (Canvas);
+    PlotHMA():          Button function entry (Plot HMA);
+------------------------------------------------------------------------------------------
+    Standard layout module:
+    LayoutDate(self, parent, sLabel, Date):         Layout date picker (sLabel : Pick date) (Return sizer & wxDate);
+    LayoutEntry(self, parent, sLabel, sEntry):      Layout entry (sLabel : sEntry) (Return sizer & wxEntry);
+    LayoutButton(self, parent, sLabel, FuncEntry):  Layout button (sLabel : FuncEntry) (Return wxBtn);
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 plt.rcParams['font.sans-serif']=['SimHei']      # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
 class ClGui(wx.App):
@@ -33,208 +39,66 @@ class ClGui(wx.App):
         self.sStockCode = sStockCode
         self.sStockName = sStockName
         self.dfStock = dfStock
+        self.dfStock = dfStock
 
         ### Global params ###
         self.sDateStart = "2015-01-01"          # Plot start date
-        self.DICT = {'HMA-1': 1, 'MA-5': 5, 'MA-10': 10, 'MA-20': 20, 'MA-30': 30, 'MA-40': 40, 'MA-50': 50,
-                     'MA-60': 60,
-                     'MA-80': 80, 'MA-100': 100, 'MA-120': 120, 'MA-150': 150, 'MA-200': 200, 'MA-240': 240}
 
         ### Call function ###
         wx.App.__init__(self)
 
     ############################################################
-    ### Init and Display GUI顶层frame: /wxFrame, /wxFrame/wxPanelCmd, /wxFrame/self.wxPanelPlot
+    ### wxPython Init (Top fram; Panel cmd; Panel plot)
     ############################################################
     def OnInit(self):
         ### Create /wxFrame ###
-        wxFrame = wx.Frame(None,
-                           title=self.sStockCode + " - " + self.sStockName,
-                           style=wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE)
+        wxFrame = wx.Frame(None, title=self.sStockCode + " - " + self.sStockName, style=wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE)
         wxSizer = wx.BoxSizer(wx.HORIZONTAL)
-
         ### Create /wxFrame/wxPanelCmd ###
         wxPanelCmd = wx.Panel(parent=wxFrame,id=-1)
         wxSizer.Add(wxPanelCmd, proportion=1, border=2, flag=wx.EXPAND|wx.ALL)
         self.LayoutPanelCmd(wxPanelCmd)
-
         ### Create /wxFrame/wxPanelPlot ###
         self.wxPanelPlot = wx.Panel(parent=wxFrame,id=-1)
         wxSizer.Add(self.wxPanelPlot, proportion=9, border=2, flag=wx.EXPAND|wx.ALL)
         self.LayoutPanelPlot(self.wxPanelPlot)
 
+        ### Show wxFrame ###
         wxFrame.SetSizer(wxSizer)
         wxFrame.Show(True)
         self.SetTopWindow(wxFrame)
         return True
 
-    def LayoutDate(self):
-        pass
     ############################################################
-    ### Layout panel cmd: ./Text: 'Stock Code';  ./Combo: SMA short, SMA long, HMA short, HMA long;  ./Btn: '绘图';
+    ### Layout panel cmd (Date picker: Start - End; Entry: Period of Sma | Hma short | Hma long; Button: Plot)
     ############################################################
     def LayoutPanelCmd(self, parent):
         wxSizer = wx.BoxSizer(orient=wx.VERTICAL)
 
-        ### Create ./Date: 起始时间 ###
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
+        ### Create ./Date picker: Start ###
+        sizer, self.wxDateStart = self.LayoutDate(parent, "Start:", datetime.datetime.strptime(self.sDateStart, '%Y-%m-%d'))
+        wxSizer.Add(sizer, proportion=0, border=50, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Date picker: End ###
+        sizer, self.wxDateEnd = self.LayoutDate(parent, "End:", datetime.datetime.now())
+        wxSizer.Add(sizer, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Entry: SMA ###
+        sizer, self.wxEntrySma = self.LayoutEntry(parent, "SMA:", "1")
+        wxSizer.Add(sizer, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Entry: HMA short ###
+        sizer, self.wxEntryHmaShort = self.LayoutEntry(parent, "HMA Short:", "24")
+        wxSizer.Add(sizer, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Entry: HMA long ###
+        sizer, self.wxEntryHmaLong = self.LayoutEntry(parent, "HMA Long:", "52")
+        wxSizer.Add(sizer, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
+        ### Create ./Button: Plot ###
+        wxBtn = self.LayoutButton(parent, "绘  图", self.PlotHMA)
+        wxSizer.Add(wxBtn, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
 
-        wxText = wx.StaticText(parent, -1, label="From:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        self.wxDateStart = wx.adv.DatePickerCtrl(parent, id=-1, style=wx.adv.DP_DROPDOWN | wx.adv.DP_SHOWCENTURY)
-        self.wxDateStart.SetValue(datetime.datetime.strptime(self.sDateStart, '%Y-%m-%d'))
-        wxSizerTmp.Add(self.wxDateStart, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=50, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ### Create ./Date: 结束时间 ###
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        wxText = wx.StaticText(parent, -1, label="To:      ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        self.wxDateEnd = wx.adv.DatePickerCtrl(parent, id=-1, style=wx.adv.DP_DROPDOWN | wx.adv.DP_SHOWCENTURY)
-        self.wxDateEnd.SetValue(datetime.datetime.now())
-        wxSizerTmp.Add(self.wxDateEnd, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ### Create ./SMA ###
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        wxText = wx.StaticText(parent, -1, label="SMA short:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        self.wxSMA = wx.TextCtrl(parent, -1, value="1", size=(60,20), style=wx.TE_CENTER)
-        wxSizerTmp.Add(self.wxSMA, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ### Create ./HMA short ###
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        wxText = wx.StaticText(parent, -1, label="HMA short:  ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        self.wxHMAShort = wx.TextCtrl(parent, -1, value="24", size=(60,20), style=wx.TE_CENTER)
-        wxSizerTmp.Add(self.wxHMAShort, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=20, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ### Create ./HMA long ###
-        wxSizerTmp = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        wxText = wx.StaticText(parent, -1, label="HMA long:   ", style=wx.ALIGN_CENTRE|wx.TE_LEFT)
-        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
-        wxSizerTmp.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
-
-        self.wxHMALong = wx.TextCtrl(parent, -1, value="52", size=(60,20), style=wx.TE_CENTER)
-        wxSizerTmp.Add(self.wxHMALong, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
-
-        wxSizer.Add(wxSizerTmp, proportion=0, border=10, flag=wx.ALIGN_CENTRE|wx.TOP)
-
-        ##############################
-        # Create ./Btn: '绘图'
-        wxBtnPlot = wx.Button(parent, -1, label="绘  图")
-        wxBtnPlot.SetFont(wx.Font(pointSize=12,family=wx.ROMAN,style=wx.NORMAL,weight=wx.NORMAL))
-        wxBtnPlot.Bind(event=wx.EVT_BUTTON,
-                       handler=self.WxPlotHMA)
-        wxSizer.Add(wxBtnPlot, proportion=0, border=30, flag=wx.ALIGN_CENTRE|wx.TOP)
-
+        ### Execute sizer ###
         parent.SetSizer(wxSizer)
 
     ############################################################
-    ### Button bind function: Plot MA
-    ############################################################
-    def WxPlotHMA(self, event):
-        self.wxSizer.Hide(self.wxCanvas)
-        self.wxCanvasFig.clear()
-        wxPlot = self.wxCanvasFig.add_subplot(111)          # Create subplot
-
-        ### Get HMA short and long period ###
-        sSMAT = self.wxSMA.GetValue()
-        sHMAShort = self.wxHMAShort.GetValue()
-        sHMALong = self.wxHMALong.GetValue()
-        if not sSMAT.isdigit():
-            print(">>> ERROR: SMA period is not number!\n")
-            return
-        elif not sHMAShort.isdigit():
-            print(">>> ERROR: HMA short period is not number!\n")
-            return
-        elif not sHMALong.isdigit():
-            print(">>> ERROR: HMA long period is not number!\n")
-            return
-        else:
-            DateStart = datetime.datetime.strptime(self.wxDateStart.GetValue().Format('%Y-%m-%d'), '%Y-%m-%d')
-            DateEnd = datetime.datetime.strptime(self.wxDateEnd.GetValue().Format('%Y-%m-%d'), '%Y-%m-%d')
-            wSMAT = int(sSMAT)
-            wHMATshort = int(sHMAShort)
-            wHMATlong = int(sHMALong)
-
-        ### Plot SMA ###
-        # Create SMA
-        serSMA = self.dfStock['Close'].rolling(window=wSMAT).mean()
-
-        # Cut off the target date section
-        serSMA = serSMA[serSMA.index >= DateStart]
-        serSMA = serSMA[serSMA.index <= DateEnd]
-
-        # Create x-axis
-        xd = np.arange(0, len(serSMA.index))
-        wxPlot.set_xlim(0,len(serSMA.index))
-        wxPlot.set_xticks(range(0, len(serSMA.index), round(len(serSMA.index) / 10)))
-        wxPlot.set_xticklabels([serSMA.index[i].strftime('%Y-%m-%d') for i in wxPlot.get_xticks()], rotation=30)
-        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
-
-        # Plot
-        wxPlot.plot(xd, serSMA, color='grey', label="SMA - " + sSMAT, linewidth=0.5)
-
-        ### Plot HMA short ###
-        # Create HMA
-        serHShort = self.dfStock['Close'].ewm(alpha=2 / wHMATshort, adjust=False, ignore_na=True).mean() * 2
-        serHLong = self.dfStock['Close'].ewm(alpha=1 / wHMATshort, adjust=False, ignore_na=True).mean()
-        serHDelta = serHShort - serHLong
-        serHMA = serHDelta.ewm(alpha=1 / (wHMATshort ** 0.5), adjust=False, ignore_na=True).mean()
-
-        # Cut off the target date section
-        serHMA = serHMA[serHMA.index >= DateStart]
-        serHMA = serHMA[serHMA.index <= DateEnd]
-
-        # Create x-axis
-        xd = np.arange(len(serSMA.index) - len(serHMA.index), len(serSMA.index))
-
-        # Plot
-        wxPlot.plot(xd, serHMA, color='red', label="HMA - " + sHMAShort, linewidth=0.5)
-
-
-        ### Plot HMA long ###
-        # Create HMA
-        serHShort = self.dfStock['Close'].ewm(alpha=2 / wHMATlong, adjust=False, ignore_na=True).mean() * 2
-        serHLong = self.dfStock['Close'].ewm(alpha=1 / wHMATlong, adjust=False, ignore_na=True).mean()
-        serHDelta = serHShort - serHLong
-        serHMA = serHDelta.ewm(alpha=1 / (wHMATlong ** 0.5), adjust=False, ignore_na=True).mean()
-
-        # Cut off the target date section
-        serHMA = serHMA[serHMA.index >= DateStart]
-        serHMA = serHMA[serHMA.index <= DateEnd]
-
-        # Create x-axis
-        xd = np.arange(len(serSMA.index) - len(serHMA.index), len(serSMA.index))
-
-        # Plot
-        wxPlot.plot(xd, serHMA, color='green', label="HMA - " + sHMALong, linewidth=0.5)
-
-        wxPlot.legend(loc='best', shadow=True, fontsize='8')
-        self.wxCanvas.draw()
-        self.wxSizer.Show(self.wxCanvas)
-
-    ############################################################
-    ### Layout panel plot: ./Canvas/CanvasFig
+    ### Layout panel plot (Canvas)
     ############################################################
     def LayoutPanelPlot(self,parent):
         self.wxSizer = wx.BoxSizer(orient=wx.VERTICAL)          # Create sizer
@@ -245,4 +109,116 @@ class ClGui(wx.App):
 
         parent.SetSizer(self.wxSizer)
 
+    ############################################################
+    ### Button function entry (Plot HMA)
+    ############################################################
+    def PlotHMA(self, event):
+        ### Validate value  ###
+        DateStart = datetime.datetime.strptime(self.wxDateStart.GetValue().Format('%Y-%m-%d'), '%Y-%m-%d')
+        DateEnd = datetime.datetime.strptime(self.wxDateEnd.GetValue().Format('%Y-%m-%d'), '%Y-%m-%d')
+        if self.wxEntrySma.GetValue().isdigit() and self.wxEntryHmaShort.GetValue().isdigit() and self.wxEntryHmaLong.GetValue().isdigit():
+            if(self.wxEntrySma.GetValue() == "0"):
+                self.wxEntrySma.SetValue("1")
+        else:
+            print(">>> ERROR: Entry SMA | HMA short | HMA long is not number!\n")
+            return
 
+        ### Clear canvas  ###
+        self.wxSizer.Hide(self.wxCanvas)
+        self.wxCanvasFig.clear()
+        wxPlot = self.wxCanvasFig.add_subplot(111)          # Create subplot
+
+        ### Plot SMA ###
+        serSma = self.CalcSma(self.dfStock["Close"], int(self.wxEntrySma.GetValue()), DateStart, DateEnd)
+        xd = np.arange(0, len(serSma.index))
+        wxPlot.plot(xd, serSma, color='grey', label="SMA - " + self.wxEntrySma.GetValue(), linewidth=0.2)
+
+        ### Set x-axis ###
+        wxPlot.set_xlim(0,len(serSma.index))
+        wxPlot.set_xticks(range(0, len(serSma.index), round(len(serSma.index) / 10)))
+        wxPlot.set_xticklabels([serSma.index[i].strftime('%Y-%m-%d') for i in wxPlot.get_xticks()], rotation=30)
+        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+
+        ### Plot HMA short ###
+        serHmaShort = self.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaShort.GetValue()), DateStart, DateEnd)
+        if(serHmaShort.index[-1] == serSma.index[-1]):
+            xd = np.arange(len(serSma.index) - len(serHmaShort.index), len(serSma.index))
+            wxPlot.plot(xd, serHmaShort, color='red', label="HMA - " + self.wxEntryHmaShort.GetValue(), linewidth=1)
+
+        ### Plot HMA long ###
+        serHmaLong = self.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaLong.GetValue()), DateStart, DateEnd)
+        if(serHmaLong.index[-1] == serSma.index[-1]):
+            xd = np.arange(len(serSma.index) - len(serHmaLong.index), len(serSma.index))
+            wxPlot.plot(xd, serHmaLong, color='green', label="HMA - " + self.wxEntryHmaLong.GetValue(), linewidth=0.5)
+
+        ### Show plot ###
+        wxPlot.legend(loc='best', shadow=True, fontsize='8')
+        self.wxCanvas.draw()
+        self.wxSizer.Show(self.wxCanvas)
+
+
+    ############################################################
+    ### Standard layout date picker (sLabel : Pick date) (Return sizer & wxDate)
+    ############################################################
+    def LayoutDate(self, parent, sLabel, Date):
+        wxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        ### Layout label ###
+        wxText = wx.StaticText(parent, -1, label=sLabel, size=(50, 20), style=wx.ALIGN_CENTRE|wx.TE_LEFT)
+        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
+        wxSizer.Add(wxText, proportion=0, border=5, flag=wx.LEFT)
+        ### Layout date picker ###
+        wxDate = wx.adv.DatePickerCtrl(parent, id=-1, size=(100, 20), style=wx.adv.DP_DROPDOWN | wx.adv.DP_SHOWCENTURY)
+        wxDate.SetValue(Date)
+        wxDate.SetFont(wx.Font(pointSize=10, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
+        wxSizer.Add(wxDate, proportion=0, border=5, flag=wx.RIGHT)
+        return wxSizer, wxDate
+
+    ############################################################
+    ### Standard layout entry (sLabel : sEntry) (Return sizer & wxEntry)
+    ############################################################
+    def LayoutEntry(self, parent, sLabel, sEntry):
+        wxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        ### Layout label ###
+        wxText = wx.StaticText(parent, -1, label=sLabel, size=(100,20), style=wx.TE_CENTER)
+        wxText.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
+        wxSizer.Add(wxText, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.LEFT)
+        ### Layout entry ###
+        wxEntry = wx.TextCtrl(parent, -1, value=sEntry, size=(50,20), style=wx.TE_CENTER)
+        wxEntry.SetFont(wx.Font(pointSize=10, family=wx.ROMAN, style=wx.NORMAL, weight=wx.NORMAL))
+        wxSizer.Add(wxEntry, proportion=0, border=5, flag=wx.ALIGN_CENTRE|wx.RIGHT)
+        return wxSizer, wxEntry
+
+    ############################################################
+    ### Standard layout button (sLabel : FuncEntry) (Return wxBtn)
+    ############################################################
+    def LayoutButton(self, parent, sLabel, FuncEntry):
+        ### Layout button ###
+        wxBtn = wx.Button(parent, -1, label=sLabel, size=(80,30))
+        wxBtn.SetFont(wx.Font(pointSize=12, family=wx.ROMAN, style=wx.NORMAL, weight=wx.BOLD))
+        wxBtn.Bind(event=wx.EVT_BUTTON, handler=FuncEntry)
+        return wxBtn
+
+    ############################################################
+    ### Standard calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
+    ############################################################
+    def CalcSma(self, ser, T, DateFrom, DateEnd):
+        ### Create SMA ###
+        serSma = ser.rolling(window=T).mean()
+        ### Cut off the target date section ###
+        serSma = serSma[serSma.index >= DateFrom]
+        serSma = serSma[serSma.index <= DateEnd]
+        return serSma
+
+    ############################################################
+    ### Standard calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
+    ############################################################
+    def CalcHma(self, ser, T, DateFrom, DateEnd):
+        ### Create HMA ###
+        serHmaShort = ser.ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        serHmaLong = ser.ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        serHmaDelta = serHmaShort - serHmaLong
+        serHma = serHmaDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
+        ### Cut off the target date section ###
+        serHma = serHma[serHma.index >= DateFrom]
+        serHma = serHma[serHma.index <= DateEnd]
+        return serHma
