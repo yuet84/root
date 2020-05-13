@@ -68,6 +68,8 @@ class ClGui(wx.App):
         self.SetTopWindow(wxFrame)
         return True
 
+    def LayoutDate(self):
+        pass
     ############################################################
     ### Layout panel cmd: ./Text: 'Stock Code';  ./Combo: SMA short, SMA long, HMA short, HMA long;  ./Btn: '绘图';
     ############################################################
