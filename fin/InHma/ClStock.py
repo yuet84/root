@@ -8,6 +8,7 @@ import datetime
 import codecs
 import talib
 from dateutil.relativedelta import relativedelta
+import tushare as ts
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Class Stock:
@@ -18,15 +19,65 @@ Class Stock:
     CalcHma(self, ser, T, DateFrom, DateEnd):       Calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 class ClStock():
-    def __init__(self, sStockCode):
+    def __init__(self, sStockCode = None):
         ### Passing params ###
         self.sStockCode = sStockCode
 
-        ### Global params ###
-        self.URL = os.path.join(os.path.abspath('../data'), self.sStockCode + '.csv')       #   Download stock data file
-
         ### Call function ###
-        self.dfStock = self.ReaddfStock(self.URL)           # Read dfStock from disk
+        #self.dfStock = self.ReaddfStock(self.URL)           # Read dfStock from disk
+        #self.CalcHmaTrend()
+
+    ############################################################
+    ### Get stock (SH & SZ) list from online (void)
+    ### Return: Stock (SH & SZ) list dataframe (Also store file "./data/000000.csv)
+    ### Note:   Use notepadd++ to check stock list file (Not excel)
+    ############################################################
+    def GetStockListOnline(self):
+        pro = ts.pro_api('85682a790fc2446f2953918e90c9022c9f025f10cac75191551aad9c')
+        sUrl = os.path.join(os.path.abspath('./data'), "000000" + '.csv')
+        dfStockList = pro.query('stock_basic', exchange='', list_status='L', fields='ts_code, symbol, name, area, industry, market, list_date')
+        dfStockList.to_csv(sUrl, index=False, columns=["ts_code", "name", "area", "industry", "market", "list_date"], encoding='utf-8')  # index=False: 不保留行索引;
+        return dfStockList
+
+    ############################################################
+    ### Get dfStock from online (From 20100101 - now())
+    ### Return: sTsCode, sName, dfStock (From 20100101 to now()) (Also store file "./data/ts_code - name.csv)
+    ############################################################
+    def GetdfStockOnline(self, sDateFrom='20100101'):
+        dfStockList = self.GetStockListOnline()
+        dfTsCode = dfStockList[["ts_code","name"]][dfStockList["symbol"] == self.sStockCode]
+        if(len(dfTsCode.index) != 1):
+            print(">>> Error: Ts code number is invalid!\n")
+            return
+        pro = ts.pro_api('85682a790fc2446f2953918e90c9022c9f025f10cac75191551aad9c')
+        sUrl = os.path.join(os.path.abspath('./data'), dfTsCode.iloc[0]["ts_code"] + " - " + dfTsCode.iloc[0]["name"] + '.csv')
+        dfStock = pro.query('daily', ts_code=dfTsCode.iloc[0]["ts_code"], start_date=sDateFrom, end_date=datetime.date.today().strftime('%Y%m%d'))
+        dfStock.to_csv(sUrl, index=False, columns=["trade_date", "open", "high", "low", "close", "amount"])  # index=False: 不保留行索引;
+        dfStock = pd.read_csv(sUrl, index_col="trade_date").sort_index(ascending=True)
+        return dfTsCode.iloc[0]["ts_code"], dfTsCode.iloc[0]["name"], dfStock
+
+    def CalcHmaTrend(self):
+        serHmaShort = self.CalcHma(self.dfStock["Close"], 12, self.dfStock.index[0], self.dfStock.index[-1])
+        serHmaLong = self.CalcHma(self.dfStock["Close"], 26, self.dfStock.index[0], self.dfStock.index[-1])
+        serHmaTrend = np.sign(serHmaShort - serHmaLong)
+
+        wHmaTrend = 1
+        wInvQuota = 0
+        wTotalPofit = 10000
+        wCnt = 0
+        for i in np.arange(0, len(self.dfStock.index)):
+            if(serHmaTrend[i] == 1) and (wHmaTrend == -1):          # Gold cross
+                wHmaTrend = 1
+                wInvQuota = round(wTotalPofit / self.dfStock.loc[self.dfStock.index[i], "Close"] / 100) * 100
+                wCnt = wCnt + 1
+                print("Cnt = ", wCnt, ";\t", self.dfStock.index[i], ";\t Quota: ", wInvQuota, ";\t Close: ", self.dfStock.loc[self.dfStock.index[i], "Close"])
+            elif(serHmaTrend[i] == -1) and (wHmaTrend == 1):        # Dead cross
+                wHmaTrend = -1
+                if(wInvQuota > 0):
+                    wTotalPofit = wInvQuota * self.dfStock.loc[self.dfStock.index[i], "Close"]
+                    wInvQuota = 0
+                    print("Sell: ", self.dfStock.index[i], " - ", wTotalPofit)
+        print("Total profit = ", wTotalPofit)
 
     ############################################################
     ### Read dfStock from local disk (sUrl: Stock file) (Return dfStock)
@@ -43,12 +94,12 @@ class ClStock():
     ############################################################
     ### Standard calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
     ############################################################
-    def CalcSma(self, ser, T, DateFrom, DateEnd):
+    def CalcSma(self, ser, T, sDateFrom, sDateEnd):
         ### Create SMA ###
         serSma = ser.rolling(window=T).mean()
         ### Cut off the target date section ###
-        serSma = serSma[serSma.index >= DateFrom]
-        serSma = serSma[serSma.index <= DateEnd]
+        serSma = serSma[serSma.index >= sDateFrom]
+        serSma = serSma[serSma.index <= sDateEnd]
         return serSma
 
     ############################################################
