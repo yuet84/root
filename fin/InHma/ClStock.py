@@ -116,6 +116,21 @@ class ClStock():
         serHma = serHma[serHma.index <= DateEnd]
         return serHma
 
+    ############################################################
+    ### Standard calc MACD (12-26-9)
+    ### Param - dfStock:    Should have "close";
+    ### Param - wDateStart:wDateEnd:    Target date section;
+    ### Return: dfMacd, which have index, "close", "diff", "dea", "bar";
+    ############################################################
+    def CalcMacd(self, dfStock, wDateStart, wDateEnd):
+        ### Create MACD ###
+        dfMacd = pd.DataFrame(dfStock, columns=["close"])
+        dfMacd["diff"], dfMacd["dea"], dfMacd["bar"] = talib.MACD(dfStock['close'].values, fastperiod=12, slowperiod=26, signalperiod=9)
+        ### Get target date section ###
+        dfMacd = dfMacd[dfMacd.index >= wDateStart]
+        dfMacd = dfMacd[dfMacd.index <= wDateEnd]
+        return dfMacd
+
 
 
 
