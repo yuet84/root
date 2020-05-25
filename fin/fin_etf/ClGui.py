@@ -34,12 +34,10 @@ Class Gui:
 plt.rcParams['font.sans-serif']=['SimHei']      # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus']=False        # 用来正常显示负号
 class ClGui(wx.App):
-    def __init__(self, sStockCode=None):
+    def __init__(self, sStockName=None):
         ### Passing params ###
-        self.sTsCode, self.sTsName, self.dfStock = ClStock(sStockCode).GetdfStockOnline()
-
-        ### Global params ###
-        self.sDateStart = "2015-01-01"          # Plot start date
+        self.sStockName = sStockName
+        self.dfStock = ClStock().ReaddfStockOnDisk(sStockName)
 
         ### Call function ###
         wx.App.__init__(self)
@@ -49,7 +47,7 @@ class ClGui(wx.App):
     ############################################################
     def OnInit(self):
         ### Create /wxFrame ###
-        wxFrame = wx.Frame(None, title=self.sTsCode + " - " + self.sTsName, style=wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE)
+        wxFrame = wx.Frame(None, title=self.sStockName, style=wx.DEFAULT_FRAME_STYLE|wx.MAXIMIZE)
         wxSizer = wx.BoxSizer(wx.HORIZONTAL)
         ### Create /wxFrame/wxPanelCmd ###
         wxPanelCmd = wx.Panel(parent=wxFrame,id=-1)
@@ -73,7 +71,7 @@ class ClGui(wx.App):
         wxSizer = wx.BoxSizer(orient=wx.VERTICAL)
 
         ### Create ./Date picker: Start ###
-        sizer, self.wxDateStart = self.LayoutDate(parent, "Start:", datetime.datetime.strptime(self.sDateStart, '%Y-%m-%d'))
+        sizer, self.wxDateStart = self.LayoutDate(parent, "Start:", datetime.datetime.strptime("2015-01-01", '%Y-%m-%d'))
         wxSizer.Add(sizer, proportion=0, border=50, flag=wx.ALIGN_CENTRE|wx.TOP)
         ### Create ./Date picker: End ###
         sizer, self.wxDateEnd = self.LayoutDate(parent, "End:", datetime.datetime.now())
@@ -114,8 +112,8 @@ class ClGui(wx.App):
     ############################################################
     def PlotHMA(self, event):
         ### Get input param  ###
-        wDateStart = int(self.wxDateStart.GetValue().Format('%Y%m%d'))
-        wDateEnd = int(self.wxDateEnd.GetValue().Format('%Y%m%d'))
+        sDateStart = str(self.wxDateStart.GetValue().Format('%Y-%m-%d'))
+        sDateEnd = str(self.wxDateEnd.GetValue().Format('%Y-%m-%d'))
 
         ### Clear canvas, and create plot  ###
         self.wxSizer.Hide(self.wxCanvas)
@@ -124,28 +122,28 @@ class ClGui(wx.App):
         wxPlotMacd = self.wxCanvasFig.add_subplot(2, 1, 2)          # Create subplot
 
         ### Plot Close ###
-        dfClose = pd.DataFrame(self.dfStock, columns=["price"])
-        dfClose = ClStock().GetTargetDateSection(dfClose, wDateStart, wDateEnd)
+        dfClose = pd.DataFrame(self.dfStock, columns=["close"])
+        dfClose = ClStock().GetTargetDateSection(dfClose, sDateStart, sDateEnd)
         self.PlotClose(wxPlotHma, dfClose, "grey", "Close", 0.2)
 
         ### Plot HMA - 12 ###
         dfHmaT12 = ClStock().CalcHma(self.dfStock, 12)
-        dfHmaT12 = ClStock().GetTargetDateSection(dfHmaT12, wDateStart, wDateEnd)
+        dfHmaT12 = ClStock().GetTargetDateSection(dfHmaT12, sDateStart, sDateEnd)
         self.PlotHma(wxPlotHma, dfHmaT12, "red", "HMA - 12", 1)
 
         ### Plot HMA - 26 ###
         dfHmaT26 = ClStock().CalcHma(self.dfStock, 26)
-        dfHmaT26 = ClStock().GetTargetDateSection(dfHmaT26, wDateStart, wDateEnd)
+        dfHmaT26 = ClStock().GetTargetDateSection(dfHmaT26, sDateStart, sDateEnd)
         self.PlotHma(wxPlotHma, dfHmaT26, "blue", "HMA - 26", 0.8)
 
         ### Plot HMA - 52 ###
         dfHmaT52 = ClStock().CalcHma(self.dfStock, 52)
-        dfHmaT52 = ClStock().GetTargetDateSection(dfHmaT52, wDateStart, wDateEnd)
+        dfHmaT52 = ClStock().GetTargetDateSection(dfHmaT52, sDateStart, sDateEnd)
         self.PlotHma(wxPlotHma, dfHmaT52, "green", "HMA - 52", 0.8)
 
         ### Plot HMACD ###
         dfHmacd = ClStock().CalcHmacd(self.dfStock)
-        dfHmacd = ClStock().GetTargetDateSection(dfHmacd, wDateStart, wDateEnd)
+        dfHmacd = ClStock().GetTargetDateSection(dfHmacd, sDateStart, sDateEnd)
         self.PlotMacd(wxPlotMacd, dfHmacd)
 
         ### Show plot ###
@@ -198,14 +196,14 @@ class ClGui(wx.App):
     ############################################################
     ### Plot close
     ### Param - parent:     Plot canvas;
-    ### Param - dfClose:    Plot data, which should have index, "price";
+    ### Param - dfClose:    Plot data, which should have index, "close";
     ### Param - sColor, sLabel, wLineWidth:     Plot HMA with color, label, line width;
     ### Return: void;
     ############################################################
     def PlotClose(self, parent, dfClose, sColor, sLabel, wLineWidth):
         ### Plot ###
         xd = np.arange(0, len(dfClose.index))
-        parent.plot(xd, dfClose["price"], color=sColor, label=sLabel, linewidth=wLineWidth)
+        parent.plot(xd, dfClose["close"], color=sColor, label=sLabel, linewidth=wLineWidth)
         ### Set x-axis ###
         parent.set_xlim(0,len(dfClose.index))
         parent.set_xticks(range(0, len(dfClose.index), round(len(dfClose.index) / 10)))
@@ -234,7 +232,7 @@ class ClGui(wx.App):
     ############################################################
     ### Standard plot MACD
     ### Param - parent: Plot canvas;
-    ### Param - dfMacd: Plot data, which should have index, "price", "diff", "dea", "bar";
+    ### Param - dfMacd: Plot data, which should have index, "close", "diff", "dea", "bar";
     ### Return: void;
     ############################################################
     def PlotMacd(self, parent, dfMacd):

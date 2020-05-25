@@ -13,10 +13,10 @@ import tushare as ts
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Class Stock:
     ReaddfStock(self, sUrl):        Read dfStock from local disk (sUrl: Stock file) (Return dfStock);
-------------------------------------------------------------------------------------------
-    Standard module:
-    CalcSma(self, ser, T, DateFrom, DateEnd):       Calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
-    CalcHma(self, ser, T, DateFrom, DateEnd):       Calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
+    GetTargetDateSection(dfStock, wDateStart, wDateEnd):    Return dfStock in target date section;
+    CalcHma(dfStock, T):            Calc HMA (T);
+    CalcMacd(dfStock):              Calc MACD (12-26-9):
+    CalcHmacd(dfStock):             Calc HMACD (12-26-9);
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 class ClStock():
     def __init__(self, sStockCode = None):
@@ -43,7 +43,7 @@ class ClStock():
     ### Get dfStock from online (From 20100101 - now())
     ### Return: sTsCode, sName, dfStock (From 20100101 to now()) (Also store file "./data/ts_code - name.csv)
     ############################################################
-    def GetdfStockOnline(self, sDateFrom='20100101'):
+    def GetdfStockOnline(self, sDateFrom='19900101'):
         dfStockList = self.GetStockListOnline()
         dfTsCode = dfStockList[["ts_code","name"]][dfStockList["symbol"] == self.sStockCode]
         if(len(dfTsCode.index) != 1):
@@ -52,9 +52,78 @@ class ClStock():
         pro = ts.pro_api('85682a790fc2446f2953918e90c9022c9f025f10cac75191551aad9c')
         sUrl = os.path.join(os.path.abspath('./data'), dfTsCode.iloc[0]["ts_code"] + " - " + dfTsCode.iloc[0]["name"] + '.csv')
         dfStock = pro.query('daily', ts_code=dfTsCode.iloc[0]["ts_code"], start_date=sDateFrom, end_date=datetime.date.today().strftime('%Y%m%d'))
-        dfStock.to_csv(sUrl, index=False, columns=["trade_date", "open", "high", "low", "close", "amount"])  # index=False: 不保留行索引;
+        print(dfStock)
+        dfStock["price"] = (dfStock["open"] + dfStock["close"]) / 2
+        dfStock.to_csv(sUrl, index=False, columns=["trade_date", "price", "close", "amount"])  # index=False: 不保留行索引;
         dfStock = pd.read_csv(sUrl, index_col="trade_date").sort_index(ascending=True)
         return dfTsCode.iloc[0]["ts_code"], dfTsCode.iloc[0]["name"], dfStock
+
+    ############################################################
+    ### Read dfStock from local disk (sUrl: Stock file) (Return dfStock)
+    ############################################################
+    def ReaddfStock(self, sUrl):
+        dfStock = pd.read_csv(sUrl, parse_dates=True, index_col="date")
+        return dfStock
+
+    ############################################################
+    ### Get dfStock in target date section
+    ### Param - dfStock:    Stock dataframe;
+    ### Param - wDateStart ～ wDateEnd:  Target date section;
+    ### Return: dfStock in target date section;
+    ############################################################
+    def GetTargetDateSection(self, dfStock, wDateStart, wDateEnd):
+        if(wDateStart < wDateEnd):
+            dfStock = dfStock[dfStock.index >= wDateStart]
+            dfStock = dfStock[dfStock.index <= wDateEnd]
+            return dfStock
+        else:
+            print(">>> Error: Input param is invalid!\n")
+
+    ############################################################
+    ### Calc HMA (T)
+    ### Param - dfStock:    Should have "price";
+    ### Param - T:  HMA period;
+    ### Return: dfMacd, which have index, "price", "hma";
+    ############################################################
+    def CalcHma(self, dfStock, T):
+        ### Create HMA ###
+        dfHma = pd.DataFrame(dfStock, columns=["price"])
+        dfHma["short"] = dfHma["price"].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        dfHma["long"] = dfHma["price"].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        dfHma["delta"] = dfHma["short"] - dfHma["long"]
+        dfHma["hma"] = dfHma["delta"].ewm(alpha=1 / T ** 0.5, adjust=False, ignore_na=True).mean()
+        return dfHma
+
+    ############################################################
+    ### Calc MACD (12-26-9)
+    ### Param - dfStock:    Should have "price";
+    ### Return: dfMacd, which have index, "price", "diff", "dea", "bar";
+    ############################################################
+    def CalcMacd(self, dfStock):
+        ### Create MACD ###
+        dfMacd = pd.DataFrame(dfStock, columns=["price"])
+        dfMacd["diff"], dfMacd["dea"], dfMacd["bar"] = talib.MACD(dfStock['price'].values, fastperiod=12, slowperiod=26, signalperiod=9)
+        return dfMacd
+
+    ############################################################
+    ### Calc HMACD (12-26-9)
+    ### Param - dfStock:    Should have "price";
+    ### Return: dfHmacd, which have index, "price", "diff", "dea", "bar";
+    ############################################################
+    def CalcHmacd(self, dfStock):
+        ### Create MACD ###
+        dfHmacd = pd.DataFrame(dfStock, columns=["price"])
+        dfHmaT12 = self.CalcHma(dfHmacd, 12)
+        dfHmaT26 = self.CalcHma(dfHmacd, 26)
+        dfHmacd["diff"] = dfHmaT12["hma"] - dfHmaT26["hma"]
+        df = dfHmacd
+        df["price"] = dfHmacd["diff"]
+        dfHmaDea =  self.CalcHma(df, 8)
+        dfHmacd["dea"] = dfHmaDea["hma"]
+        dfHmacd["bar"] = (dfHmacd["diff"] - dfHmacd["dea"]) * 2
+        #dfHmacd["bar"] = (dfHmaT12["hma"] - dfHmaT26["hma"]) * 2
+        return dfHmacd
+
 
     def CalcHmaTrend(self):
         serHmaShort = self.CalcHma(self.dfStock["Close"], 12, self.dfStock.index[0], self.dfStock.index[-1])
@@ -78,59 +147,3 @@ class ClStock():
                     wInvQuota = 0
                     print("Sell: ", self.dfStock.index[i], " - ", wTotalPofit)
         print("Total profit = ", wTotalPofit)
-
-    ############################################################
-    ### Read dfStock from local disk (sUrl: Stock file) (Return dfStock)
-    ############################################################
-    def ReaddfStock(self, sUrl):
-        if not os.path.exists(self.URL):
-            print(">>> Stock data - ", self.sStockCode, ": Not exist. Try to get stock data online!\n")
-        else:
-            dfStock = pd.read_csv(sUrl,                     # Read csv from local disk
-                                  parse_dates=True,
-                                  index_col=0)
-            return dfStock
-
-    ############################################################
-    ### Standard calc SMA (ser: Target data; T: SMA period; DateFrom:DateEnd: Target date) (Return serSma)
-    ############################################################
-    def CalcSma(self, ser, T, sDateFrom, sDateEnd):
-        ### Create SMA ###
-        serSma = ser.rolling(window=T).mean()
-        ### Cut off the target date section ###
-        serSma = serSma[serSma.index >= sDateFrom]
-        serSma = serSma[serSma.index <= sDateEnd]
-        return serSma
-
-    ############################################################
-    ### Standard calc HMA (ser: Target data; T: HMA period; DateFrom:DateEnd: Target date) (Return serHma)
-    ############################################################
-    def CalcHma(self, ser, T, DateFrom, DateEnd):
-        ### Create HMA ###
-        serHmaShort = ser.ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
-        serHmaLong = ser.ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
-        serHmaDelta = serHmaShort - serHmaLong
-        serHma = serHmaDelta.ewm(alpha=1 / (T ** 0.5), adjust=False, ignore_na=True).mean()
-        ### Cut off the target date section ###
-        serHma = serHma[serHma.index >= DateFrom]
-        serHma = serHma[serHma.index <= DateEnd]
-        return serHma
-
-    ############################################################
-    ### Standard calc MACD (12-26-9)
-    ### Param - dfStock:    Should have "close";
-    ### Param - wDateStart:wDateEnd:    Target date section;
-    ### Return: dfMacd, which have index, "close", "diff", "dea", "bar";
-    ############################################################
-    def CalcMacd(self, dfStock, wDateStart, wDateEnd):
-        ### Create MACD ###
-        dfMacd = pd.DataFrame(dfStock, columns=["close"])
-        dfMacd["diff"], dfMacd["dea"], dfMacd["bar"] = talib.MACD(dfStock['close'].values, fastperiod=12, slowperiod=26, signalperiod=9)
-        ### Get target date section ###
-        dfMacd = dfMacd[dfMacd.index >= wDateStart]
-        dfMacd = dfMacd[dfMacd.index <= wDateEnd]
-        return dfMacd
-
-
-
-

@@ -8,6 +8,6 @@ import warnings
 
 
 if __name__ == '__main__':
-    #uGui = ClGui("603111")              # 康尼机电
-    #uGui = ClGui("600309")              # 万华化学
+    sStockName = "510500 - 中证500ETF"
+    uGui = ClGui(sStockName)
     uGui.MainLoop()

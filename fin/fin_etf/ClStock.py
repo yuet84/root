@@ -53,16 +53,17 @@ class ClStock():
         sUrl = os.path.join(os.path.abspath('./data'), dfTsCode.iloc[0]["ts_code"] + " - " + dfTsCode.iloc[0]["name"] + '.csv')
         dfStock = pro.query('daily', ts_code=dfTsCode.iloc[0]["ts_code"], start_date=sDateFrom, end_date=datetime.date.today().strftime('%Y%m%d'))
         print(dfStock)
-        dfStock["price"] = (dfStock["open"] + dfStock["close"]) / 2
-        dfStock.to_csv(sUrl, index=False, columns=["trade_date", "price", "close", "amount"])  # index=False: 不保留行索引;
+        dfStock["close"] = (dfStock["open"] + dfStock["close"]) / 2
+        dfStock.to_csv(sUrl, index=False, columns=["trade_date", "close", "close", "amount"])  # index=False: 不保留行索引;
         dfStock = pd.read_csv(sUrl, index_col="trade_date").sort_index(ascending=True)
         return dfTsCode.iloc[0]["ts_code"], dfTsCode.iloc[0]["name"], dfStock
 
     ############################################################
     ### Read dfStock from local disk (sUrl: Stock file) (Return dfStock)
     ############################################################
-    def ReaddfStock(self, sUrl):
-        dfStock = pd.read_csv(sUrl, parse_dates=True, index_col="date")
+    def ReaddfStockOnDisk(self, sStockName):
+        sUrl = os.path.join(os.path.abspath('./data'), sStockName + '.csv')
+        dfStock = pd.read_csv(sUrl, parse_dates=False, index_col="date")
         return dfStock
 
     ############################################################
@@ -81,43 +82,43 @@ class ClStock():
 
     ############################################################
     ### Calc HMA (T)
-    ### Param - dfStock:    Should have "price";
+    ### Param - dfStock:    Should have "close";
     ### Param - T:  HMA period;
-    ### Return: dfMacd, which have index, "price", "hma";
+    ### Return: dfMacd, which have index, "close", "hma";
     ############################################################
     def CalcHma(self, dfStock, T):
         ### Create HMA ###
-        dfHma = pd.DataFrame(dfStock, columns=["price"])
-        dfHma["short"] = dfHma["price"].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
-        dfHma["long"] = dfHma["price"].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
+        dfHma = pd.DataFrame(dfStock, columns=["close"])
+        dfHma["short"] = dfHma["close"].ewm(alpha=2 / T, adjust=False, ignore_na=True).mean() * 2
+        dfHma["long"] = dfHma["close"].ewm(alpha=1 / T, adjust=False, ignore_na=True).mean()
         dfHma["delta"] = dfHma["short"] - dfHma["long"]
         dfHma["hma"] = dfHma["delta"].ewm(alpha=1 / T ** 0.5, adjust=False, ignore_na=True).mean()
         return dfHma
 
     ############################################################
     ### Calc MACD (12-26-9)
-    ### Param - dfStock:    Should have "price";
-    ### Return: dfMacd, which have index, "price", "diff", "dea", "bar";
+    ### Param - dfStock:    Should have "close";
+    ### Return: dfMacd, which have index, "close", "diff", "dea", "bar";
     ############################################################
     def CalcMacd(self, dfStock):
         ### Create MACD ###
-        dfMacd = pd.DataFrame(dfStock, columns=["price"])
-        dfMacd["diff"], dfMacd["dea"], dfMacd["bar"] = talib.MACD(dfStock['price'].values, fastperiod=12, slowperiod=26, signalperiod=9)
+        dfMacd = pd.DataFrame(dfStock, columns=["close"])
+        dfMacd["diff"], dfMacd["dea"], dfMacd["bar"] = talib.MACD(dfStock['close'].values, fastperiod=12, slowperiod=26, signalperiod=9)
         return dfMacd
 
     ############################################################
     ### Calc HMACD (12-26-9)
-    ### Param - dfStock:    Should have "price";
-    ### Return: dfHmacd, which have index, "price", "diff", "dea", "bar";
+    ### Param - dfStock:    Should have "close";
+    ### Return: dfHmacd, which have index, "close", "diff", "dea", "bar";
     ############################################################
     def CalcHmacd(self, dfStock):
         ### Create MACD ###
-        dfHmacd = pd.DataFrame(dfStock, columns=["price"])
+        dfHmacd = pd.DataFrame(dfStock, columns=["close"])
         dfHmaT12 = self.CalcHma(dfHmacd, 12)
         dfHmaT26 = self.CalcHma(dfHmacd, 26)
         dfHmacd["diff"] = dfHmaT12["hma"] - dfHmaT26["hma"]
         df = dfHmacd
-        df["price"] = dfHmacd["diff"]
+        df["close"] = dfHmacd["diff"]
         dfHmaDea =  self.CalcHma(df, 8)
         dfHmacd["dea"] = dfHmaDea["hma"]
         dfHmacd["bar"] = (dfHmacd["diff"] - dfHmacd["dea"]) * 2

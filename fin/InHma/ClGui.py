@@ -113,63 +113,42 @@ class ClGui(wx.App):
     ### Button function entry (Plot HMA)
     ############################################################
     def PlotHMA(self, event):
-        ### Validate value  ###
+        ### Get input param  ###
         wDateStart = int(self.wxDateStart.GetValue().Format('%Y%m%d'))
         wDateEnd = int(self.wxDateEnd.GetValue().Format('%Y%m%d'))
-        if self.wxEntrySma.GetValue().isdigit() and self.wxEntryHmaShort.GetValue().isdigit() and self.wxEntryHmaLong.GetValue().isdigit():
-            if(self.wxEntrySma.GetValue() == "0"):
-                self.wxEntrySma.SetValue("1")
-        else:
-            print(">>> ERROR: Entry SMA | HMA short | HMA long is not number!\n")
-            return
 
-        ### Clear canvas  ###
+        ### Clear canvas, and create plot  ###
         self.wxSizer.Hide(self.wxCanvas)
         self.wxCanvasFig.clear()
-        wxPlot = self.wxCanvasFig.add_subplot(2, 1, 1)              # Create subplot
+        wxPlotHma = self.wxCanvasFig.add_subplot(2, 1, 1)              # Create subplot
         wxPlotMacd = self.wxCanvasFig.add_subplot(2, 1, 2)          # Create subplot
 
-        ### Plot SMA ###
-        serSma = ClStock().CalcSma(self.dfStock["close"], int(self.wxEntrySma.GetValue()), wDateStart, wDateEnd)
-        xd = np.arange(0, len(serSma.index))
-        wxPlot.plot(xd, serSma, color='grey', label="SMA - " + self.wxEntrySma.GetValue(), linewidth=0.2)
+        ### Plot Close ###
+        dfClose = pd.DataFrame(self.dfStock, columns=["price"])
+        dfClose = ClStock().GetTargetDateSection(dfClose, wDateStart, wDateEnd)
+        self.PlotClose(wxPlotHma, dfClose, "grey", "Close", 0.2)
 
-        ### Set x-axis ###
-        wxPlot.set_xlim(0,len(serSma.index))
-        wxPlot.set_xticks(range(0, len(serSma.index), round(len(serSma.index) / 10)))
-        wxPlot.set_xticklabels([str(serSma.index[i]) for i in wxPlot.get_xticks()], rotation=30)
-        wxPlot.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+        ### Plot HMA - 12 ###
+        dfHmaT12 = ClStock().CalcHma(self.dfStock, 12)
+        dfHmaT12 = ClStock().GetTargetDateSection(dfHmaT12, wDateStart, wDateEnd)
+        self.PlotHma(wxPlotHma, dfHmaT12, "red", "HMA - 12", 1)
 
-        ### Plot HMA short ###
-        serHmaShort = ClStock().CalcHma(self.dfStock["close"], int(self.wxEntryHmaShort.GetValue()), wDateStart, wDateEnd)
-        if(serHmaShort.index[-1] == serSma.index[-1]):
-            xd = np.arange(len(serSma.index) - len(serHmaShort.index), len(serSma.index))
-            wxPlot.plot(xd, serHmaShort, color='red', label="HMA - " + self.wxEntryHmaShort.GetValue(), linewidth=1)
+        ### Plot HMA - 26 ###
+        dfHmaT26 = ClStock().CalcHma(self.dfStock, 26)
+        dfHmaT26 = ClStock().GetTargetDateSection(dfHmaT26, wDateStart, wDateEnd)
+        self.PlotHma(wxPlotHma, dfHmaT26, "blue", "HMA - 26", 0.8)
 
-        ### Plot HMA medium ###
-        serHmaMedium = ClStock().CalcHma(self.dfStock["close"], int(self.wxEntryHmaMedium.GetValue()), wDateStart, wDateEnd)
-        if(serHmaMedium.index[-1] == serSma.index[-1]):
-            xd = np.arange(len(serSma.index) - len(serHmaMedium.index), len(serSma.index))
-            wxPlot.plot(xd, serHmaMedium, color='blue', label="HMA - " + self.wxEntryHmaMedium.GetValue(), linewidth=0.8)
+        ### Plot HMA - 52 ###
+        dfHmaT52 = ClStock().CalcHma(self.dfStock, 52)
+        dfHmaT52 = ClStock().GetTargetDateSection(dfHmaT52, wDateStart, wDateEnd)
+        self.PlotHma(wxPlotHma, dfHmaT52, "green", "HMA - 52", 0.8)
 
-        ##########
-        ## Plot MACD
-        dfMacd = ClStock().CalcMacd(self.dfStock, wDateStart, wDateEnd)
-        self.PlotMacd(wxPlotMacd, dfMacd)
-
-
-
-
-        '''
-        ### Plot HMA long ###
-        serHmaLong = self.uStock.CalcHma(self.dfStock["Close"], int(self.wxEntryHmaLong.GetValue()), wDateStart, wDateEnd)
-        if(serHmaLong.index[-1] == serSma.index[-1]):
-            xd = np.arange(len(serSma.index) - len(serHmaLong.index), len(serSma.index))
-            wxPlot.plot(xd, serHmaLong, color='green', label="HMA - " + self.wxEntryHmaLong.GetValue(), linewidth=0.5)
-        '''
+        ### Plot HMACD ###
+        dfHmacd = ClStock().CalcHmacd(self.dfStock)
+        dfHmacd = ClStock().GetTargetDateSection(dfHmacd, wDateStart, wDateEnd)
+        self.PlotMacd(wxPlotMacd, dfHmacd)
 
         ### Show plot ###
-        wxPlot.legend(loc='best', shadow=True, fontsize='8')
         self.wxCanvas.draw()
         self.wxSizer.Show(self.wxCanvas)
 
@@ -215,10 +194,47 @@ class ClGui(wx.App):
         wxBtn.Bind(event=wx.EVT_BUTTON, handler=FuncEntry)
         return wxBtn
 
+
+    ############################################################
+    ### Plot close
+    ### Param - parent:     Plot canvas;
+    ### Param - dfClose:    Plot data, which should have index, "price";
+    ### Param - sColor, sLabel, wLineWidth:     Plot HMA with color, label, line width;
+    ### Return: void;
+    ############################################################
+    def PlotClose(self, parent, dfClose, sColor, sLabel, wLineWidth):
+        ### Plot ###
+        xd = np.arange(0, len(dfClose.index))
+        parent.plot(xd, dfClose["price"], color=sColor, label=sLabel, linewidth=wLineWidth)
+        ### Set x-axis ###
+        parent.set_xlim(0,len(dfClose.index))
+        parent.set_xticks(range(0, len(dfClose.index), round(len(dfClose.index) / 10)))
+        parent.set_xticklabels([str(dfClose.index[i]) for i in parent.get_xticks()], rotation=30)
+        parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+        parent.legend(loc='best', shadow=True, fontsize ='8')
+
+    ############################################################
+    ### Plot HMA
+    ### Param - parent:     Plot canvas;
+    ### Param - dfHma:      Plot data, which should have index, "hma";
+    ### Param - sColor, sLabel, wLineWidth:     Plot HMA with color, label, line width;
+    ### Return: void;
+    ############################################################
+    def PlotHma(self, parent, dfHma, sColor, sLabel, wLineWidth):
+        ### Plot ###
+        xd = np.arange(0, len(dfHma.index))
+        parent.plot(xd, dfHma["hma"], color=sColor, label=sLabel, linewidth=wLineWidth)
+        ### Set x-axis ###
+        parent.set_xlim(0,len(dfHma.index))
+        parent.set_xticks(range(0, len(dfHma.index), round(len(dfHma.index) / 10)))
+        parent.set_xticklabels([str(dfHma.index[i]) for i in parent.get_xticks()], rotation=30)
+        parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+        parent.legend(loc='best', shadow=True, fontsize ='8')
+
     ############################################################
     ### Standard plot MACD
     ### Param - parent: Plot canvas;
-    ### Param - dfMacd: Plot data, which should have index, "close", "diff", "dea", "bar";
+    ### Param - dfMacd: Plot data, which should have index, "price", "diff", "dea", "bar";
     ### Return: void;
     ############################################################
     def PlotMacd(self, parent, dfMacd):
