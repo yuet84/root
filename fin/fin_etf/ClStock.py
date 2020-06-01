@@ -93,3 +93,27 @@ class ClStock():
         dfStock["HMA-BAR"] = (dfStock["HMA-DIF"] - dfStock["HMA-DEA"]) * 2
         dfStock = pd.DataFrame(dfStock, columns=["close", "HMA-DIF", "HMA-DEA", "HMA-BAR"])
         return dfStock
+
+    ############################################################
+    ### Calc HMACD (HMA12-HMA26-HMA9)
+    ### Param - dfStock:    Should have "close";
+    ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
+    ############################################################
+    def CalcHmaTrade(self, dfStock):
+        pass
+
+
+    ############################################################
+    ### Calc HMACD (HMA12-HMA26-HMA9)
+    ### Param - dfStock:    Should have "close";
+    ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
+    ############################################################
+    def CalcHmacdTmp(self, dfStock):
+        dfStock["HMA-12"] = (self.CalcHma(dfStock, period=34, column="close"))["HMA"]
+        dfStock["HMA-26"] = (self.CalcHma(dfStock, period=36, column="close"))["HMA"]
+        dfStock["HMA-DIF"] = dfStock["HMA-12"] - dfStock["HMA-26"]
+        dfStock["HMA-DEA"] = (self.CalcHma(dfStock, period=6, column="HMA-DIF"))["HMA"]
+        #dfStock["HMA-BAR"] = (dfStock["HMA-DIF"] - dfStock["HMA-DEA"]) * 2
+        dfStock["HMA-BAR"] = (dfStock["HMA-12"] - dfStock["HMA-26"])
+        dfStock = pd.DataFrame(dfStock, columns=["close", "HMA-DIF", "HMA-DEA", "HMA-BAR"])
+        return dfStock

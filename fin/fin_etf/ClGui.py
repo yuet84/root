@@ -117,18 +117,28 @@ class ClGui(wx.App):
         df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
         self.PlotHma(wxPlotHma, df, "red", "HMA - 12", 1)
 
-        ### Plot HMA - 26 ###
-        df = ClStock().CalcHma(self.dfStock, 26)
+        ### Plot HMA - 24 ###
+        df = ClStock().CalcHma(self.dfStock, 24)
         df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
-        self.PlotHma(wxPlotHma, df, "blue", "HMA - 26", 0.8)
+        self.PlotHma(wxPlotHma, df, "blue", "HMA - 24", 0.8)
+
+        ### Plot HMA - 34 ###
+        df = ClStock().CalcHma(self.dfStock, 34)
+        df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
+        self.PlotHma(wxPlotHma, df, "purple", "HMA - 34", 0.5)
 
         wxPlotHma.legend(loc='best', shadow=True, fontsize ='8')
 
 
         ### Plot HMACD ###
-        df = ClStock().CalcHmacd(self.dfStock)
+        df = ClStock().CalcHmacdTmp(self.dfStock)
         df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
         self.PlotHmacd(wxPlotMacd, df)
+
+        ### Plot HMA - 34 ###
+        df = (ClStock().CalcHma(self.dfStock, 34)-6)/5
+        df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
+        self.PlotHma(wxPlotMacd, df, "purple", "HMA - 34", 0.5)
 
         ### Show plot ###
         self.wxCanvas.draw()
