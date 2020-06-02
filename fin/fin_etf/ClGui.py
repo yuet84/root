@@ -35,6 +35,7 @@ class ClGui(wx.App):
         ### Global params ###
         self.sStockName = sStockName
         self.dfStock = ClStock().ReadETFdfStock(sStockName)
+        ClStock().CalcHmaTrade(self.dfStock)
 
         ### Call function ###
         wx.App.__init__(self)

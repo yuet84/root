@@ -100,7 +100,12 @@ class ClStock():
     ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
     ############################################################
     def CalcHmaTrade(self, dfStock):
-        pass
+        dfStock["HMA-12"] = (self.CalcHma(dfStock, period=12, column="close"))["HMA"]
+        dfStock["HMA-26"] = (self.CalcHma(dfStock, period=26, column="close"))["HMA"]
+        dfStock["Rise"] = np.sign(dfStock["HMA-12"] - dfStock['HMA-26'])
+        dfStock["Rise"] = np.sign(dfStock["Rise"] - dfStock["Rise"].shift(1))
+        dfStock["Rise"] = (dfStock["Rise"])[dfStock["Rise"] !=0]
+        dfStock.to_csv(r"D:\gitHub\root\fin\fin_etf\00.csv", index=True)
 
 
     ############################################################
