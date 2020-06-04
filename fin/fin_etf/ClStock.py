@@ -32,7 +32,7 @@ class ClStock():
     ############################################################
     def ReadETFdfStock(self, sStockName):
         sUrl = os.path.join(os.path.abspath('./data'), sStockName + '.csv')
-        dfStock = pd.read_csv(sUrl, parse_dates=False, index_col="date")
+        dfStock = pd.read_csv(sUrl, parse_dates=False, index_col="date", engine='python')
         return dfStock
 
     ############################################################
@@ -100,13 +100,19 @@ class ClStock():
     ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
     ############################################################
     def CalcHmaTrade(self, dfStock):
+        '''
         dfStock["HMA-12"] = (self.CalcHma(dfStock, period=12, column="close"))["HMA"]
         dfStock["HMA-26"] = (self.CalcHma(dfStock, period=26, column="close"))["HMA"]
         dfStock["Rise"] = np.sign(dfStock["HMA-12"] - dfStock['HMA-26'])
         dfStock["Rise"] = np.sign(dfStock["Rise"] - dfStock["Rise"].shift(1))
         dfStock["Rise"] = (dfStock["Rise"])[dfStock["Rise"] !=0]
-        dfStock.to_csv(r"D:\gitHub\root\fin\fin_etf\00.csv", index=True)
-
+        dfStock.to_csv(r"F:\gitHub\root\fin\fin_etf\00.csv", index=True)
+        '''
+        dfStock["HMA-34"] = (self.CalcHma(dfStock, period=34, column="close"))["HMA"]
+        dfStock["Rise"] = dfStock["HMA-34"] - dfStock["HMA-34"].shift(1)
+        dfStock["HMA"] = (self.CalcHma(dfStock, period=6, column="Rise"))["HMA"]
+        dfStock = pd.DataFrame(dfStock, columns=["close", "HMA"])
+        return dfStock
 
     ############################################################
     ### Calc HMACD (HMA12-HMA26-HMA9)

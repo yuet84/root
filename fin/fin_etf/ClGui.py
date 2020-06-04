@@ -9,7 +9,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
-import mplfinance as mpf #替换 import mpl_finance as mpf
+import mplfinance as mpf
+#import mpl_finance as mpf
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import matplotlib.gridspec as gridspec#分割子图
 import datetime
@@ -132,14 +133,12 @@ class ClGui(wx.App):
 
 
         ### Plot HMACD ###
-        df = ClStock().CalcHmacdTmp(self.dfStock)
-        df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
-        self.PlotHmacd(wxPlotMacd, df)
+        #df = ClStock().CalcHmacdTmp(self.dfStock)
+        #df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
+        #self.PlotHmacd(wxPlotMacd, df)
+        self.PlotTrend(wxPlotMacd, self.dfStock, sDateStart, sDateEnd)
 
-        ### Plot HMA - 34 ###
-        df = (ClStock().CalcHma(self.dfStock, 34)-6)/5
-        df = ClStock().GetTargetDateSection(df, sDateStart, sDateEnd)
-        self.PlotHma(wxPlotMacd, df, "purple", "HMA - 34", 0.5)
+
 
         ### Show plot ###
         self.wxCanvas.draw()
@@ -202,6 +201,8 @@ class ClGui(wx.App):
         ### Set x-axis ###
         parent.set_xlim(0, len(dfClose.index))
         n = int(len(dfClose.index) / 20 / 10) * 20
+        if(n == 0):
+            n = 20
         parent.set_xticks(range(0, len(dfClose.index), n))
         parent.set_xticklabels([str(dfClose.index[i]) for i in parent.get_xticks()], rotation=30)
         parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
@@ -259,6 +260,70 @@ class ClGui(wx.App):
         ### Set x-axis ###
         parent.set_xlim(0,len(dfStock.index))
         n = int(len(dfStock.index) / 20 / 10) * 20
+        parent.set_xticks(range(0, len(dfStock.index), n))
+        parent.set_xticklabels([str(dfStock.index[i]) for i in parent.get_xticks()], rotation=30)
+        parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+        parent.legend(loc='best', shadow=True, fontsize ='8')
+
+
+    def PlotTrend1(self, parent, dfStock, sDateStart, sDateEnd):
+        ### Calc HMA ###
+        dfStock["HMA-12"] = (ClStock().CalcHma(dfStock, period=12, column="close"))["HMA"]
+        dfStock["HMA-24"] = (ClStock().CalcHma(dfStock, period=24, column="close"))["HMA"]
+        dfStock["HMA-34"] = (ClStock().CalcHma(dfStock, period=34, column="close"))["HMA"]
+        ### Calc trend ###
+        dfStock["Trend-12-24"] = np.sign(dfStock["HMA-12"] - dfStock['HMA-24'])
+        dfStock["Trend-34"] = dfStock["HMA-34"] - dfStock["HMA-34"].shift(1)
+        dfStock["Trend-24-34"] = np.sign(dfStock["HMA-24"] - dfStock['HMA-34'])
+        ### Get target date section ###
+        dfStock = ClStock().GetTargetDateSection(dfStock, sDateStart, sDateEnd)
+        ### Calc GOLD trend ###
+        dfStock["Trend-Gold"] = dfStock["Trend-12-24"] * 10 + dfStock["Trend-34"] #+ dfStock["Trend-24-34"]
+        uBarRed = np.where(dfStock['Trend-Gold'] >= 10,  2 * dfStock['Trend-12-24'], 0)        # Condition ? True, False
+        ### Calc DEAD trend ###
+        dfStock["Trend-Dead"] = dfStock["Trend-12-24"] + dfStock["Trend-34"] * 10
+        uBarGreen = np.where(dfStock['Trend-Dead'] < 0, 2 * dfStock['Trend-12-24'], 0)        # Condition ? True, False
+        ### Plot ###
+        xd = np.arange(0, len(dfStock.index))
+        parent.bar(xd, uBarRed, facecolor='red')
+        parent.bar(xd, uBarGreen, facecolor='green')
+        ### Set x-axis ###
+        parent.set_xlim(0,len(dfStock.index))
+        n = int(len(dfStock.index) / 20 / 10) * 20
+        if(n == 0):
+            n = 20
+        parent.set_xticks(range(0, len(dfStock.index), n))
+        parent.set_xticklabels([str(dfStock.index[i]) for i in parent.get_xticks()], rotation=30)
+        parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)
+        parent.legend(loc='best', shadow=True, fontsize ='8')
+
+    def PlotTrend(self, parent, dfStock, sDateStart, sDateEnd):
+        ### Calc HMA ###
+        dfStock["HMA-12"] = (ClStock().CalcHma(dfStock, period=12, column="close"))["HMA"]
+        dfStock["HMA-24"] = (ClStock().CalcHma(dfStock, period=24, column="close"))["HMA"]
+        dfStock["HMA-34"] = (ClStock().CalcHma(dfStock, period=34, column="close"))["HMA"]
+        ### Calc trend ###
+        dfStock["Trend-12-24"] = np.sign(dfStock["HMA-12"] - dfStock['HMA-24'])
+        dfStock["Trend-34"] = dfStock["HMA-34"] - dfStock["HMA-34"].shift(1)
+        dfStock["Trend-34-HMA-6"] =(ClStock().CalcHma(dfStock, period=6, column="Trend-34"))["HMA"]
+        dfStock["Trend-24-34"] = np.sign(dfStock["HMA-24"] - dfStock['HMA-34'])
+        ### Get target date section ###
+        dfStock = ClStock().GetTargetDateSection(dfStock, sDateStart, sDateEnd)
+        ### Calc GOLD trend ###
+        #dfStock["Trend-Gold"] = dfStock["Trend-12-24"] * 10 + dfStock["Trend-34"] #+ dfStock["Trend-24-34"]
+        uBarRed = np.where(dfStock['Trend-34-HMA-6'] > 0,  2 * dfStock['Trend-34-HMA-6'], 0)        # Condition ? True, False
+        ### Calc DEAD trend ###
+        #dfStock["Trend-Dead"] = dfStock["Trend-12-24"] + dfStock["Trend-34"] * 10
+        uBarGreen = np.where(dfStock['Trend-34-HMA-6'] < 0, 2 * dfStock['Trend-34-HMA-6'], 0)        # Condition ? True, False
+        ### Plot ###
+        xd = np.arange(0, len(dfStock.index))
+        parent.bar(xd, uBarRed, facecolor='red')
+        parent.bar(xd, uBarGreen, facecolor='green')
+        ### Set x-axis ###
+        parent.set_xlim(0,len(dfStock.index))
+        n = int(len(dfStock.index) / 20 / 10) * 20
+        if(n == 0):
+            n = 20
         parent.set_xticks(range(0, len(dfStock.index), n))
         parent.set_xticklabels([str(dfStock.index[i]) for i in parent.get_xticks()], rotation=30)
         parent.grid(b=True, axis='x', color='grey', linestyle='-', linewidth=0.2)

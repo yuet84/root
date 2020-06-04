@@ -22,12 +22,11 @@ df = pd.DataFrame([[1,10,20,"001001"],
               index=[20200101,20200102,20200103,20200104,20200105,],
               columns=['Ma20', 'Close','Low','High'])
 
-s = 1999
-
-n = int(s/20/10)
-
-print(n*20)
-
+#sUrl = r"F:\gitHub\root\fin\fin_etf\data\000.csv"
+sUrl = r"F:\gitHub\root\fin\fin_etf\data\510500 - 中证500ETF.csv"
+#df.to_csv(sUrl)     # index=False: 不保留行索引;
+dfStock = pd.read_csv(sUrl, engine='python')
+print(dfStock)
 '''
 ### Init tushare ###
 pro = ts.pro_api('85682a790fc2446f2953918e90c9022c9f025f10cac75191551aad9c')
