@@ -23,11 +23,8 @@ df = pd.DataFrame([[1,1,0,"001001"],
               columns=['Close', 'Gold','Dead','High'])
 
 print("Origin:\n", df)
-for row in df.itertuples():
-    #print("row: ", row)
-    #print(type(row))
-    row.Close=1
+df["Trade"] = np.where( (df["Close"] >= 8) and (df["Gold"] >= 1), 1, 0)
+#df["Trade"] = np.where( (df["Close"] > 9) and (df["Trend-Hma-12-50"] > 0), 1, 0)
 print(df)
-
 
 

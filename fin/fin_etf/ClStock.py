@@ -122,29 +122,44 @@ class ClStock():
         df["Hma-50"] = (self.CalcHma(df, period=24, column="Close"))["Hma"]
         ### Get trend: "Hma-12" cross "Hma-24" ###
         df["Trend-Hma-12-24"] =  df["Hma-12"] - df["Hma-24"]
+        ### Get trend: "Hma-12" cross "Hma-50" ###
+        df["Trend-Hma-12-50"] =  df["Hma-12"] - df["Hma-50"]
+        ### Get "Hma-24" trend ###
+        df["Trend-Hma-24"] = df["Hma-24"] - df["Hma-24"].shift(1)
+        df["Trend-Hma-24"] = (self.CalcHma(df, period=6, column="Trend-Hma-24"))["Hma"]
         ### Get "Hma-50" trend ###
         df["Hma-50-Trend"] = df["Hma-50"] - df["Hma-50"].shift(1)
         df["Hma-50-Trend"] = (self.CalcHma(df, period=6, column="Hma-50-Trend"))["Hma"]
         ### Get "Gold" trend ###
-        df["Gold"] = np.where(df["Trend-Hma-12-24"] > 0, df["Trend-Hma-12-24"], 0)
-        df["Gold"] = np.where(df["Trend-Hma-12-24"] < 0, df["Trend-Hma-12-24"], 0)
+        df["Trade"] = np.where( (df["Trend-Hma-12-24"] > 0) and (df["Trend-Hma-12-50"] > 0), 1, 0)
+        df["Trade"] = df["Trade"] + np.where(df["Trend-Hma-24"] < 0, -1, 0)
         ### Get "Dead" trend ###
         #df["Dead"] = np.where(df["Trend-Hma-12-24"] < 0, df["Trend-Hma-12-24"], 0)
+
+        ### Get target date section ###
+        df = self.GetTargetDateSection(df, "20150101", "20200101")
+        sUrl = r"D:\gitHub\root\fin\fin_etf\0.csv"
+        df.to_csv(sUrl, index=True)
 
         ### Trade ###
         bIsHold = 0
         wCash = 10000
         for row in df.itertuples():
-            if( (row.Gold > 0) and (bIsHold == 0) ):        # Buy
+            if( (row.Trade > 0) and (bIsHold == 0) ):        # Buy
                 wLot = int(wCash / row.Close / 100) * 100
-                wAllowance = wCash - wLot * row.Close
+                wCash = wCash - wLot * row.Close
                 bIsHold = 1
+                print("Buy on ", row[0], ":  Lot = ", wLot, ";  Cash = ", wLot * row.Close + wCash, ";\n")
 
-            if( (row.Gold < 0) and (bIsHold == 1) ):
-                wCash = wAllowance + wLot * row.Close
+            if( (row.Trade < 0) and (bIsHold == 1) ):
+                wCash = wCash + wLot * row.Close
                 bIsHold = 0
+                print("Sold on ", row[0], ":  Lot = ", wLot, ";  Cash = ", wCash, ";\n")
 
-        if(bIsHold == 0)
-            print("Sold. Sum = ")
-        print(df)
+        if(bIsHold == 0):
+            print("Hold none. wCash = ", wCash, ";\n")
+        else:
+            print("Hold. Share cash = ", wCash + wLot * df.iloc[-1]["Close"], ";\n")
+
+        #print(df)
         return
