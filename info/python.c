@@ -1,5 +1,63 @@
 python info
 		|
+		|===str、int转换：									{
+				|
+				|---str转换成int：							{
+															if s.isdigit():
+																num = int(s)
+				}
+				|
+				|---int转换成str：							{
+															s = str(num)
+				}
+		}
+		|
+		|===pandas											{
+				|
+				|---包含库:									{
+															import pandas as pd
+				}
+				|
+				|---pandas series:							{
+						|
+						|...访问元素：						{
+															.	ser["index name"]
+															.	ser[index number]
+						}
+				}
+				|
+				|---pandas dataframe:						{
+						|
+						|...从原df抽取数列组成新的df：		{
+															.	dfMacd = pd.DataFrame(self.dfStock, columns=["close"])
+						}
+						|
+						|...访问元素:						{
+															.	ser = df["Close"][0]
+						}
+						|
+						|...抽取一列：						{
+															.	ser = df["Clsoe"]
+						}
+						|
+						|...查找元素值的那一行：			{
+															df = dfStock[dfStock['Close'] == 12.3]			# "Close"值为12.3的行组成的df
+						}
+						|
+						|...排序:							{
+															.	df.sort_index(ascending=False)				# 按索引排序
+															.	df.sort_value(ascending=False)				# 按值排序
+						}
+						|
+						|...
+				}
+				|
+				|---保存、读取数据到csv文件：				{
+															.	dfStock.to_csv(sUrl, index=False, columns=["trade_date", "open", "high", "low", "close", "amount"])     # index=False: 不保留行索引;
+															.	dfStock = pd.read_csv(sUrl, index_col="trade_date")
+				}
+		}
+		|
 		|===日期、时间:										{
 				|
 				|---当前日期：								{
@@ -74,3 +132,5 @@ python info
 ########################################################################
 12/26
 24/52
+DIF: 0.067
+DEA: 0.056

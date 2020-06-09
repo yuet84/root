@@ -1,69 +1,28 @@
 python info
 		|
-		|===日期、时间:										{
+		|===MACD:											{
 				|
-				|---当前日期：								{
-															import datetime
-															Date = datetime.date.today()
-				}
-				|
-				|---字符串转化成时间：						{
-															import datetime
-															Date = datetime.datetime.strptime("2015-01-01", '%Y-%m-%d')
-				}
-				|
-				|---时间转换成字符串：						{
-															import datetime
-															sDate = Date.strftime('%Y-%m-%d')
-				}
-		}
-		|
-		|===wxPython:										{
-				|
-				|---TextCtrl文本输入框：					{
-				}
-		}
-		|
-		|===移动平均线：									{
-				|
-				|---EMA(Exponential Moving Average):		{
+				|---定义：									{
 						|
-						|...定义:							EMA（today）= α * Price（today） + ( 1 - α ) * EMA（yesterday）
-															Param:
-																α:	平滑指数，一般取作2 / (N+1);
-																EMA（0）= Price（0）;
+						|...
 						|
-						|...pandas.Series.ewm():			Series.ewm(self, com=None, span=None, halflife=None, alpha=None, min_periods=0, adjust=True, ignore_na=False, axis=0)[source]
-															Param:
-																com:	定义α的一种方式， α = 1 / (1+com), for com≥0.
-																span:	定义α的一种方式， α = 2 / (span+1), for span≥1.
-																halflife:	定义α的一种方式， α = 1 − exp(log(0.5) / halflife),for halflife>0.
-																alpha:	平滑因子, 0 < α ≤ 1.
-																adjust:	True时，加权平均是按如下因子计算：(1-alpha)(n-1), (1-alpha)(n-2), …, 1-alpha, 1
-																		False时，因子权重按如下当时计算：	weighted_average[0] = arg[0];
-																											weighted_average[i] = (1-alpha)weighted_average[i-1] + alphaarg[i].
-																ignore_na:	在加权计算中忽略Nan的值
-															返回值: 为DataFrame
+						|...DIFF = EMA("close", T=12) - EMA("close", T=26)；大概是14日线；
 						|
-						|...EMA计算：						Series.ewm(alpha=α, adjust=False, ignore_na=True)
-															即：
-																	y0 = x0,
-																	yt = α * xt + (1 - α) * yt_1
-																	Param:
-																		α:	权重的衰减程度，取值在 0 和 1 之间。  越大，过去的观测值衰减的越快。
-																			取值：2 / (T + 1)；或1 / T
+						|...DEA = EMA("diff", T=9)；大概是20日线
+						|
+						|...BAR = ("diff" - "dea") * 2
+						|
+						|...0轴：大概是60日均线；
 				}
 				|
-				|---HMA(Hull Moving Average)：赫尔移动平均：{
+				|---应用：									{
 						|
-						|...HMA计算：						1.	计算窗口为 T / 2 的加权移动平均，并把结果乘以 2（如果 T / 2 不是整数则取整）
-																df.Stock['Hshort'] = df.Stock['Close'].ewm(alpha=round(2/T), adjust=False) * 2
-															2.	计算窗口为T的加权移动平均
-																df.Stock['Hlong'] = df.Stock['Close'].ewm(alpha=T, adjust=False)
-															3.	用第 1 步的结果减去第 2 部的结果，得到一个新的时间序列
-																df.Stock['HMA'] = df.Stock['Hshort'] - df.Stock['Hlong']
-															4.	以第 3 步得到的时间序列为对象，计算窗口为平方根(T)的加权移动平均（如果平方根(T)不是整数则取整）
-																df.Stock['HMA'] = df.Stock['HMA'].ewm(alpha=round(T**0.5), adjust=False)
+						|...DIFF跌破0轴，股价跌破60日均线；
+						|
+						|...红柱子对比前面一根不再伸长时，股价就会下跌；绿柱子对比前面一根不再伸长时，股价就会止跌；（提前）
+						|
+						|...底背离：下降趋势，创新低后，DIFF回抽0轴（a）0轴上；b）跌破0轴一点点；c）突破0轴一点点）后的背离：股价创新低，而DIFF不创新低；
+							顶背离：上升趋势，创新高后，DIFF回抽0轴（a）0轴上；b）跌破0轴一点点；c）突破0轴一点点）后的背离：股价创新高，而DIFF不创新高；
 				}
 		}
 		|
@@ -74,3 +33,7 @@ python info
 ########################################################################
 12/26
 24/52
+
+买入点：	HMA_12金叉HMA26 && HMA_26非下降趋势
+卖出点：	HMA_26下降趋势
+HMA_35与HMA50的位置决定
