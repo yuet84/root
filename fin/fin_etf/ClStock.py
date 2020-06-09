@@ -58,12 +58,14 @@ class ClStock():
     ############################################################
     def CalcHma(self, dfStock, period=12, column="close"):
         ### Create HMA ###
-        dfStock["EMA_HT"] =  dfStock[column].ewm(alpha=2/(period/2+1), adjust=False, ignore_na=False).mean()
-        dfStock["EMA_T"] =  dfStock[column].ewm(alpha=2/(period+1), adjust=False, ignore_na=False).mean()
-        dfStock["Delta"] = dfStock["EMA_HT"] * 2 - dfStock["EMA_T"]
-        dfStock["HMA"] =  dfStock["Delta"].ewm(alpha=2/(period**0.5+1), adjust=False, ignore_na=False).mean()
-        dfStock = pd.DataFrame(dfStock, columns=[column, "HMA"])
-        return dfStock
+        df = pd.DataFrame()
+        df[column] = dfStock[column]
+        df["Ema_Short"] =  df[column].ewm(alpha=2/(period/2+1), adjust=False, ignore_na=False).mean()
+        df["Ema_Long"] =  df[column].ewm(alpha=2/(period+1), adjust=False, ignore_na=False).mean()
+        df["Delta"] = df["Ema_Short"] * 2 - df["Ema_Long"]
+        df["Hma"] =  df["Delta"].ewm(alpha=2/(period**0.5+1), adjust=False, ignore_na=False).mean()
+        df = pd.DataFrame(df, columns=[column, "Hma"])
+        return df
 
     ############################################################
     ### Calc MACD (12-26-9)
@@ -99,26 +101,6 @@ class ClStock():
     ### Param - dfStock:    Should have "close";
     ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
     ############################################################
-    def CalcHmaTrade(self, dfStock):
-        '''
-        dfStock["HMA-12"] = (self.CalcHma(dfStock, period=12, column="close"))["HMA"]
-        dfStock["HMA-26"] = (self.CalcHma(dfStock, period=26, column="close"))["HMA"]
-        dfStock["Rise"] = np.sign(dfStock["HMA-12"] - dfStock['HMA-26'])
-        dfStock["Rise"] = np.sign(dfStock["Rise"] - dfStock["Rise"].shift(1))
-        dfStock["Rise"] = (dfStock["Rise"])[dfStock["Rise"] !=0]
-        dfStock.to_csv(r"F:\gitHub\root\fin\fin_etf\00.csv", index=True)
-        '''
-        dfStock["HMA-34"] = (self.CalcHma(dfStock, period=34, column="close"))["HMA"]
-        dfStock["Rise"] = dfStock["HMA-34"] - dfStock["HMA-34"].shift(1)
-        dfStock["HMA"] = (self.CalcHma(dfStock, period=6, column="Rise"))["HMA"]
-        dfStock = pd.DataFrame(dfStock, columns=["close", "HMA"])
-        return dfStock
-
-    ############################################################
-    ### Calc HMACD (HMA12-HMA26-HMA9)
-    ### Param - dfStock:    Should have "close";
-    ### Return: dfStock, which have index, "close", "HMA-DIF", "HMA-DEA", "HMA-BAR";
-    ############################################################
     def CalcHmacdTmp(self, dfStock):
         dfStock["HMA-12"] = (self.CalcHma(dfStock, period=34, column="close"))["HMA"]
         dfStock["HMA-26"] = (self.CalcHma(dfStock, period=36, column="close"))["HMA"]
@@ -128,3 +110,41 @@ class ClStock():
         dfStock["HMA-BAR"] = (dfStock["HMA-12"] - dfStock["HMA-26"])
         dfStock = pd.DataFrame(dfStock, columns=["close", "HMA-DIF", "HMA-DEA", "HMA-BAR"])
         return dfStock
+
+    def CalcHmaTrade(self, sStockName):
+        df = pd.DataFrame()
+        ### Get dfStock ###
+        dfStock = self.ReadETFdfStock(sStockName)
+        ### Get HMA ###
+        df["Close"] = dfStock["close"]
+        df["Hma-12"] = (self.CalcHma(df, period=12, column="Close"))["Hma"]
+        df["Hma-24"] = (self.CalcHma(df, period=24, column="Close"))["Hma"]
+        df["Hma-50"] = (self.CalcHma(df, period=24, column="Close"))["Hma"]
+        ### Get trend: "Hma-12" cross "Hma-24" ###
+        df["Trend-Hma-12-24"] =  df["Hma-12"] - df["Hma-24"]
+        ### Get "Hma-50" trend ###
+        df["Hma-50-Trend"] = df["Hma-50"] - df["Hma-50"].shift(1)
+        df["Hma-50-Trend"] = (self.CalcHma(df, period=6, column="Hma-50-Trend"))["Hma"]
+        ### Get "Gold" trend ###
+        df["Gold"] = np.where(df["Trend-Hma-12-24"] > 0, df["Trend-Hma-12-24"], 0)
+        df["Gold"] = np.where(df["Trend-Hma-12-24"] < 0, df["Trend-Hma-12-24"], 0)
+        ### Get "Dead" trend ###
+        #df["Dead"] = np.where(df["Trend-Hma-12-24"] < 0, df["Trend-Hma-12-24"], 0)
+
+        ### Trade ###
+        bIsHold = 0
+        wCash = 10000
+        for row in df.itertuples():
+            if( (row.Gold > 0) and (bIsHold == 0) ):        # Buy
+                wLot = int(wCash / row.Close / 100) * 100
+                wAllowance = wCash - wLot * row.Close
+                bIsHold = 1
+
+            if( (row.Gold < 0) and (bIsHold == 1) ):
+                wCash = wAllowance + wLot * row.Close
+                bIsHold = 0
+
+        if(bIsHold == 0)
+            print("Sold. Sum = ")
+        print(df)
+        return

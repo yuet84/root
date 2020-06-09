@@ -9,5 +9,6 @@ import warnings
 
 if __name__ == '__main__':
     sStockName = "510500 - 中证500ETF"
-    uGui = ClGui(sStockName)
-    uGui.MainLoop()
+    ClStock().CalcHmaTrade(sStockName)
+    #uGui = ClGui(sStockName)
+    #uGui.MainLoop()
